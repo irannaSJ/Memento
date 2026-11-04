@@ -10,6 +10,9 @@ export interface LocalDailyTodoItem {
   title: string
   projectId: string
   projectLabel: string
+  /** Parent Task context for task-specific to-do items. */
+  taskId?: string
+  taskLabel?: string
   priority: DailyTodoPriority
   completed: boolean
   /** When the item was created (ISO timestamp). */

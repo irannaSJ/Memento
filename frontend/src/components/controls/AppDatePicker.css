@@ -1,0 +1,230 @@
+
+/* ==========================================
+   Memento AppDatePicker
+========================================== */
+
+.app-date-picker {
+  --date-surface: var(--color-surface, #ffffff);
+  --date-page: var(--color-page, #faf9f7);
+  --date-text: var(--color-text, #171717);
+  --date-muted: var(--color-muted, #77736f);
+  --date-border: var(--color-border, #e5e2df);
+  --date-focus: #9ca3af;
+
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.app-date-picker__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--date-text);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.app-date-picker__required {
+  color: #d65b65;
+}
+
+.app-date-picker__control {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+}
+
+.app-date-picker__control input {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 42px 0 13px;
+  border: 1px solid var(--date-border);
+  border-radius: 10px;
+  outline: none;
+  background: var(--date-surface);
+  color: var(--date-text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.app-date-picker__control input::placeholder {
+  color: var(--date-muted);
+  font-weight: 400;
+}
+
+.app-date-picker__control input:focus {
+  border-color: var(--date-focus);
+  outline: 2px solid rgb(156 163 175 / 20%);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
+.app-date-picker__control input:focus-visible {
+  outline: 2px solid #9ca3af;
+  outline-offset: 2px;
+}
+
+.app-date-picker__icon {
+  position: absolute;
+  right: 14px;
+  color: var(--date-muted);
+  font-size: 17px;
+  pointer-events: none;
+}
+
+.app-date-picker.is-disabled .app-date-picker__control {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.app-date-picker.is-disabled input {
+  cursor: not-allowed;
+}
+
+.app-date-picker.has-error input {
+  border-color: #d65b65;
+}
+
+.app-date-picker__message {
+  margin: 0;
+  color: var(--date-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.app-date-picker__message--error {
+  color: #d65b65;
+}
+
+/* ==========================================
+   Air Datepicker theme
+========================================== */
+
+.air-datepicker.memento-air-datepicker {
+  --adp-accent-color: var(--color-text, #171717);
+  --adp-background-color: var(--color-surface, #ffffff);
+  --adp-color: var(--color-text, #171717);
+  --adp-border-color: var(--color-border, #e5e2df);
+  --adp-border-radius: 13px;
+  --adp-cell-background-color-hover: #f2f2f2;
+  --adp-cell-background-color-selected: #171717;
+  --adp-cell-background-color-selected-hover: #333333;
+  --adp-cell-color-selected: #ffffff;
+
+  z-index: 3000;
+  width: 290px;
+  padding: 9px;
+  border: 1px solid var(--adp-border-color);
+  border-radius: 13px;
+  background: var(--adp-background-color);
+  color: var(--adp-color);
+  box-shadow: 0 14px 38px rgb(0 0 0 / 12%);
+  font-family: inherit;
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-nav {
+  min-height: 43px;
+  border-bottom-color: var(--adp-border-color);
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-nav--title {
+  border-radius: 7px;
+  color: var(--adp-color);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-nav--title:hover,
+.air-datepicker.memento-air-datepicker .air-datepicker-nav--action:hover {
+  background: var(--adp-cell-background-color-hover);
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-nav--action {
+  width: 34px;
+  border-radius: 7px;
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-body--day-names {
+  margin: 8px 0 5px;
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-body--day-name {
+  color: var(--date-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-cell {
+  min-height: 34px;
+  border-radius: 8px;
+  font-size: 12px;
+  transition: background-color 120ms ease;
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-cell.-current- {
+  color: var(--adp-accent-color);
+  font-weight: 750;
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-cell.-selected- {
+  background: var(--adp-accent-color);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-cell.-selected-.-focus- {
+  background: #333333;
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-cell.-focus- {
+  background: var(--adp-cell-background-color-hover);
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-cell.-other-month- {
+  color: #aaa;
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-buttons {
+  gap: 7px;
+  padding-top: 9px;
+  border-top-color: var(--adp-border-color);
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-button {
+  min-height: 32px;
+  border-radius: 7px;
+  background: var(--date-page);
+  color: var(--adp-color);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.air-datepicker.memento-air-datepicker .air-datepicker-button:hover {
+  background: var(--adp-cell-background-color-hover);
+}
+
+@media (max-width: 480px) {
+  .air-datepicker.memento-air-datepicker {
+    width: min(290px, calc(100vw - 24px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-date-picker *,
+  .air-datepicker.memento-air-datepicker * {
+    transition: none !important;
+  }
+}

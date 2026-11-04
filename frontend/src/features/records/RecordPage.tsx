@@ -15,6 +15,13 @@ import { RecordUpdateDialog } from '../../components/form/RecordUpdateDialog'
 import { MetadataDrivenForm } from '../../components/form/MetadataDrivenForm'
 
 
+import {
+  AppDatePicker,
+  AppSelect,
+  AppCombobox,
+} from '../../components/controls'
+
+
 import './RecordPage.css'
 
 const PAGE_LENGTH = 20
@@ -592,15 +599,28 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
             Refresh
           </button>
 
-          {feature.id === 'tasks' && (
+          {feature.id === 'activity' && Boolean(activeFilters.task_id) && (
             <button
               type="button"
               className="record-page__secondary-button record-page__todo-button"
-              onClick={() => navigate('/daily-todo')}
-              aria-label="Open Daily To-Do"
+              onClick={() => {
+                const params = new URLSearchParams()
+                const taskId = String(activeFilters.task_id)
+                const taskLabel = queryParams.get('task_label') || taskId
+                const projectId = queryParams.get('project_id') || ''
+                const projectLabel = queryParams.get('project_label') || ''
+
+                params.set('task_id', taskId)
+                params.set('task_label', taskLabel)
+                if (projectId) params.set('project_id', projectId)
+                if (projectLabel) params.set('project_label', projectLabel)
+
+                navigate(`/daily-todo?${params.toString()}`)
+              }}
+              aria-label="Open To-Do items for this task"
             >
               <i className="ri-list-check-2" aria-hidden="true" />
-              Daily To-Do
+              Task To-Do
             </button>
           )}
 
@@ -619,6 +639,7 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
 
 
 
+        
         <div className="record-page__filters">
           <div className="record-page__filters-heading">
             <i className="ri-equalizer-2-line" aria-hidden="true" />
@@ -637,9 +658,11 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
 
               const fieldname = field.fieldname
               const value = String(activeFilters[fieldname] ?? '')
-              const options = getSelectOptions(
+
+              const selectOptions = getSelectOptions(
                 'options' in field ? field.options : undefined,
               )
+
               const linkOptions = linkFilterOptions[fieldname] ?? []
 
               const selectedLabel =
@@ -650,7 +673,9 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
                     : null
 
               const choices =
-                value && !linkOptions.some((option) => option.value === value)
+                value && !linkOptions.some(
+                  (option) => option.value === value,
+                )
                   ? [
                       {
                         value,
@@ -661,68 +686,79 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
                   : linkOptions
 
               return (
-                <label
+                <div
                   className="record-page__filter-field"
                   key={fieldname}
                 >
-                  <span>{field.label}</span>
-
                   {field.fieldtype === 'Select' ? (
-                    <select
+                    <AppSelect
+                      id={`filter-${fieldname}`}
+                      label={field.label}
                       value={value}
-                      onChange={(event) =>
-                        updateFilter(fieldname, event.target.value)
+                      onChange={(nextValue) =>
+                        updateFilter(fieldname, nextValue)
                       }
-                    >
-                      <option value="">All {field.label}</option>
-
-                      {options.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder={`All ${field.label}`}
+                      options={[
+                        {
+                          value: '',
+                          label: `All ${field.label}`,
+                        },
+                        ...selectOptions.map((option) => ({
+                          value: option,
+                          label: option,
+                        })),
+                      ]}
+                    />
                   ) : field.fieldtype === 'Date' ? (
-                    <input
-                      type="date"
+                    <AppDatePicker
+                      id={`filter-${fieldname}`}
+                      label={field.label}
                       value={value}
-                      aria-label={`Filter by ${field.label}`}
-                      onChange={(event) =>
-                        updateFilter(fieldname, event.target.value)
+                      onChange={(nextValue) =>
+                        updateFilter(fieldname, nextValue)
                       }
+                      placeholder={`Select ${field.label}`}
+                      clearable
                     />
                   ) : field.fieldtype === 'Link' ? (
-                    <select
+                    <AppCombobox
+                      id={`filter-${fieldname}`}
+                      label={field.label}
                       value={value}
-                      onChange={(event) =>
-                        updateFilter(fieldname, event.target.value)
+                      onChange={(nextValue) =>
+                        updateFilter(fieldname, nextValue)
                       }
-                    >
-                      <option value="">
-                        All {field.label}
-                      </option>
-
-                      {choices.map((option) => (
-                        <option
-                          key={option.value}
-                          value={option.value}
-                        >
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      value={value}
-                      aria-label={`Filter by ${field.label}`}
-                      placeholder={`Enter ${field.label}`}
-                      onChange={(event) =>
-                        updateFilter(fieldname, event.target.value)
-                      }
+                      placeholder={`All ${field.label}`}
+                      options={[
+                        {
+                          value: '',
+                          label: `All ${field.label}`,
+                        },
+                        ...choices,
+                      ]}
+                      clearable={true}
+                      emptyText={`No ${field.label} found.`}
                     />
+                  ) : (
+                    <>
+                      <label htmlFor={`filter-${fieldname}`}>
+                        {field.label}
+                      </label>
+
+                      <input
+                        id={`filter-${fieldname}`}
+                        type="text"
+                        value={value}
+                        aria-label={`Filter by ${field.label}`}
+                        placeholder={`Enter ${field.label}`}
+                        onChange={(event) =>
+                          updateFilter(fieldname, event.target.value)
+                        }
+                      />
+                    </>
                   )}
-                </label>
+                </div>
               )
             })}
 
@@ -737,6 +773,7 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
             </button>
           )}
         </div>
+
 
       </div>
 
@@ -785,19 +822,6 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
         </div>
       )}
 
-      {/* <div className="record-page__summary">
-        <div>
-          <span className="record-page__summary-label">CURRENT PAGE</span>
-          <strong>{String(pageNumber).padStart(2, '0')}</strong>
-        </div>
-
-        <span className="record-page__summary-note">
-          {activeSearch
-            ? `Search results for “${activeSearch}”`
-            : 'Workspace records'}
-        </span>
-      </div> */}
-
       {metadataLoading && !metadata ? (
         <div className="record-page__loading" role="status">
           Loading list configuration…
@@ -840,10 +864,20 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
                   const taskLabel = String(
                     record.task_name ?? record.name,
                   )
+                  const projectId = String(record.project ?? '')
+                  const projectLabel =
+                    linkFilterOptions.project?.find(
+                      (option) => option.value === projectId,
+                    )?.label ?? ''
+                  const params = new URLSearchParams({
+                    task_id: record.name,
+                    task_label: taskLabel,
+                  })
 
-                  navigate(
-                    `/activity?task_id=${encodeURIComponent(record.name)}&task_label=${encodeURIComponent(taskLabel)}`,
-                  )
+                  if (projectId) params.set('project_id', projectId)
+                  if (projectLabel) params.set('project_label', projectLabel)
+
+                  navigate(`/activity?${params.toString()}`)
                 }
               }}
             />

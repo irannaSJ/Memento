@@ -12,6 +12,8 @@ function isTodoItem(value: unknown): value is LocalDailyTodoItem {
     typeof item.title === 'string' &&
     typeof item.projectId === 'string' &&
     typeof item.projectLabel === 'string' &&
+    (item.taskId === undefined || typeof item.taskId === 'string') &&
+    (item.taskLabel === undefined || typeof item.taskLabel === 'string') &&
     typeof item.priority === 'string' &&
     typeof item.completed === 'boolean' &&
     typeof item.createdAt === 'string' &&

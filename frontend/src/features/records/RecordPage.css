@@ -661,3 +661,43 @@
 .record-page__create-button i {
   font-size: 16px;
 }
+
+
+/* Reusable controls inside record filters */
+.record-page__filter-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.record-page__filter-field .app-date-picker,
+.record-page__filter-field .app-select,
+.record-page__filter-field .app-combobox {
+  width: 100%;
+}
+
+.record-page__filter-field > label {
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.record-page__filter-field > input {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.record-page__filter-field > input:focus-visible {
+  border-color: #9ca3af;
+  outline: 2px solid rgb(156 163 175 / 20%);
+  outline-offset: 2px;
+}
