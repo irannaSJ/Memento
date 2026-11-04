@@ -77,9 +77,7 @@ export function RecordCreatePage({
                   : `${recordLabel.charAt(0).toUpperCase()}${recordLabel.slice(1)} information`}
               </h2>
 
-              <p>
-                Fields and validation are loaded from the backend.
-              </p>
+            
             </div>
 
             <span className="record-create-page__form-icon">
@@ -97,11 +95,11 @@ export function RecordCreatePage({
           </div>
         </section>
 
-        <p className="record-create-page__footnote">
+        {/* <p className="record-create-page__footnote">
           <i className="ri-shield-check-line" aria-hidden="true" />
           Your record will be saved using Memento's existing
           backend API and permission checks.
-        </p>
+        </p> */}
       </div>
     </main>
   )

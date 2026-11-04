@@ -1,5 +1,10 @@
 
-import { useEffect, useId, useRef } from 'react'
+import {
+  useEffect,
+  useId,
+  useRef,
+  type KeyboardEvent,
+} from 'react'
 
 import AirDatepicker from 'air-datepicker'
 import 'air-datepicker/air-datepicker.css'
@@ -9,6 +14,8 @@ import './AppDatePicker.css'
 export interface AppDatePickerProps {
   value: string
   onChange: (value: string) => void
+
+  mode?: 'date' | 'datetime'
 
   label?: string
   placeholder?: string
@@ -103,34 +110,55 @@ const dateLocale = {
 /* ==========================================
    Date utilities
 
-   Input/output format:
-   YYYY-MM-DD (Frappe-compatible)
+   Date:
+   YYYY-MM-DD
+
+   Datetime:
+   YYYY-MM-DD HH:mm:ss
 ========================================== */
 
 function parseDate(value: string): Date | null {
   if (!value) return null
 
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/,
+  )
 
   if (!match) return null
 
-  const [, year, month, day] = match
+  const [
+    ,
+    year,
+    month,
+    day,
+    hours = '0',
+    minutes = '0',
+    seconds = '0',
+  ] = match
 
   const numericYear = Number(year)
   const numericMonth = Number(month)
   const numericDay = Number(day)
+  const numericHours = Number(hours)
+  const numericMinutes = Number(minutes)
+  const numericSeconds = Number(seconds)
 
   const date = new Date(
     numericYear,
     numericMonth - 1,
     numericDay,
+    numericHours,
+    numericMinutes,
+    numericSeconds,
   )
 
-  // Reject invalid dates such as 2026-02-30.
   if (
     date.getFullYear() !== numericYear ||
     date.getMonth() !== numericMonth - 1 ||
-    date.getDate() !== numericDay
+    date.getDate() !== numericDay ||
+    date.getHours() !== numericHours ||
+    date.getMinutes() !== numericMinutes ||
+    date.getSeconds() !== numericSeconds
   ) {
     return null
   }
@@ -140,11 +168,37 @@ function parseDate(value: string): Date | null {
 
 function toDateValue(date: Date): string {
   const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
+
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, '0')
+
+  const day = String(
+    date.getDate(),
+  ).padStart(2, '0')
 
   return `${year}-${month}-${day}`
 }
+
+function toDateTimeValue(date: Date): string {
+  const hours = String(
+    date.getHours(),
+  ).padStart(2, '0')
+
+  const minutes = String(
+    date.getMinutes(),
+  ).padStart(2, '0')
+
+  const seconds = String(
+    date.getSeconds(),
+  ).padStart(2, '0')
+
+  return `${toDateValue(date)} ${hours}:${minutes}:${seconds}`
+}
+
+/* ==========================================
+   Display formatting
+========================================== */
 
 function formatDisplayDate(date: Date): string {
   return new Intl.DateTimeFormat('en-IN', {
@@ -154,15 +208,28 @@ function formatDisplayDate(date: Date): string {
   }).format(date)
 }
 
+function formatDisplayDateTime(date: Date): string {
+  const formattedDate = formatDisplayDate(date)
+
+  const formattedTime = new Intl.DateTimeFormat('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date)
+
+  return `${formattedDate}, ${formattedTime}`
+}
+
 /* ==========================================
-   AppDatePicker component
+   AppDatePicker
 ========================================== */
 
 export function AppDatePicker({
   value,
   onChange,
+  mode = 'date',
   label,
-  placeholder = 'Select a date',
+  placeholder,
   id,
   name,
   minDate,
@@ -188,8 +255,14 @@ export function AppDatePicker({
 
   const parsedValue = parseDate(value)
 
+  const inputPlaceholder =
+    placeholder ??
+    (mode === 'datetime'
+      ? 'Select date and time'
+      : 'Select a date')
+
   /* ========================================
-     Keep the latest React callback
+     Keep latest callback
   ======================================== */
 
   useEffect(() => {
@@ -212,12 +285,19 @@ export function AppDatePicker({
 
       firstDay: 1,
 
-      autoClose: true,
+      autoClose: mode === 'date',
+
       keyboardNav: true,
 
-      showEvent: 'click',
+      showEvent: 'focus',
 
-      dateFormat: (date: Date) => formatDisplayDate(date),
+      dateFormat: 'dd MMM yyyy',
+
+      timepicker: mode === 'datetime',
+
+      timeFormat: 'hh:mm aa',
+
+      dateTimeSeparator: ', ',
 
       selectedDates: initialDate
         ? [initialDate]
@@ -240,10 +320,15 @@ export function AppDatePicker({
           ? date[0]
           : date
 
+        if (!(selectedDate instanceof Date)) {
+          onChangeRef.current('')
+          return
+        }
+
         onChangeRef.current(
-          selectedDate instanceof Date
-            ? toDateValue(selectedDate)
-            : '',
+          mode === 'datetime'
+            ? toDateTimeValue(selectedDate)
+            : toDateValue(selectedDate),
         )
       },
     })
@@ -255,13 +340,12 @@ export function AppDatePicker({
       datepickerRef.current = null
     }
 
-    // Initialize the calendar once.
-    // React value changes are synchronized in a separate effect.
+    // Reinitialize only when picker mode or clear behavior changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [mode, clearable])
 
   /* ========================================
-     Synchronize external React value
+     Synchronize React value with calendar
   ======================================== */
 
   useEffect(() => {
@@ -283,42 +367,52 @@ export function AppDatePicker({
 
     const currentDate = datepicker.selectedDates[0]
 
-    if (
-      !currentDate ||
-      toDateValue(currentDate) !== toDateValue(selectedDate)
-    ) {
+    const currentValue = currentDate
+      ? mode === 'datetime'
+        ? toDateTimeValue(currentDate)
+        : toDateValue(currentDate)
+      : ''
+
+    const nextValue =
+      mode === 'datetime'
+        ? toDateTimeValue(selectedDate)
+        : toDateValue(selectedDate)
+
+    if (currentValue !== nextValue) {
       datepicker.selectDate(selectedDate, {
         silent: true,
+        updateTime: true,
       })
     }
-  }, [value])
+  }, [value, mode])
 
   /* ========================================
-     Update calendar options dynamically
+     Update min/max date dynamically
   ======================================== */
 
   useEffect(() => {
-    const datepicker = datepickerRef.current
-
-    if (!datepicker) return
-
-    datepicker.update({
+    datepickerRef.current?.update({
       minDate: parseDate(minDate ?? '') ?? false,
-
       maxDate: parseDate(maxDate ?? '') ?? false,
-
-      buttons: clearable
-        ? ['today', 'clear']
-        : ['today'],
     })
-  }, [minDate, maxDate, clearable])
+  }, [minDate, maxDate])
+
+  /* ========================================
+     Hide calendar when disabled
+  ======================================== */
+
+  useEffect(() => {
+    if (disabled) {
+      datepickerRef.current?.hide()
+    }
+  }, [disabled])
 
   /* ========================================
      Keyboard accessibility
   ======================================== */
 
   function handleKeyDown(
-    event: React.KeyboardEvent<HTMLInputElement>,
+    event: KeyboardEvent<HTMLInputElement>,
   ) {
     if (disabled) return
 
@@ -342,10 +436,17 @@ export function AppDatePicker({
       ? helperId
       : undefined
 
+  const displayValue = parsedValue
+    ? mode === 'datetime'
+      ? formatDisplayDateTime(parsedValue)
+      : formatDisplayDate(parsedValue)
+    : ''
+
   return (
     <div
       className={[
         'app-date-picker',
+        `app-date-picker--${mode}`,
         error ? 'has-error' : '',
         disabled ? 'is-disabled' : '',
         className,
@@ -374,16 +475,11 @@ export function AppDatePicker({
           id={inputId}
           name={name}
           type="text"
-          value={
-            parsedValue
-              ? formatDisplayDate(parsedValue)
-              : ''
-          }
-          placeholder={placeholder}
+          value={displayValue}
+          placeholder={inputPlaceholder}
           readOnly
           disabled={disabled}
           required={required}
-          aria-label={!label ? placeholder : undefined}
           aria-haspopup="dialog"
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}

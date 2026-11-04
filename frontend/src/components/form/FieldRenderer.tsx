@@ -1,4 +1,10 @@
+
 import type { FieldMetadata } from '../../services/mementoApi'
+
+import {
+  AppDatePicker,
+  AppSelect,
+} from '../controls'
 
 import {
   RichTextEditor,
@@ -59,10 +65,20 @@ export function FieldRenderer({
 
   const id = `memento-field-${field.fieldname}`
   const valueText = displayValue(value)
+
   const disabled = !editable || field.read_only
   const required = field.required && !disabled
 
+  const helperText = [
+    field.read_only ? 'Read only.' : '',
+    field.description ?? '',
+  ]
+    .filter(Boolean)
+    .join(' ') || undefined
 
+  /* ========================================
+     Link and Dynamic Link fields
+  ======================================== */
 
   if (
     field.fieldtype === 'Link' ||
@@ -109,21 +125,26 @@ export function FieldRenderer({
     )
   }
 
+  /* ========================================
+     Rich Text Editor
+  ======================================== */
 
-  // Rich-text field: formatting, links, and image handling.
   if (field.fieldtype === 'Text Editor') {
     return (
       <div className="metadata-form__field">
         <label htmlFor={id}>
           <span>
             {field.label}
+
             {field.required && (
-              <span className="metadata-form__required"> *</span>
+              <span className="metadata-form__required">
+                {' '}*
+              </span>
             )}
+
             {field.read_only && (
               <span className="metadata-form__readonly">
-                {' '}
-                · Read only
+                {' '}· Read only
               </span>
             )}
           </span>
@@ -153,11 +174,17 @@ export function FieldRenderer({
     )
   }
 
-  // Checkbox field.
+  /* ========================================
+     Checkbox
+  ======================================== */
+
   if (field.fieldtype === 'Check') {
     return (
       <div className="metadata-form__field">
-        <label className="metadata-form__checkbox" htmlFor={id}>
+        <label
+          className="metadata-form__checkbox"
+          htmlFor={id}
+        >
           <input
             id={id}
             name={field.fieldname}
@@ -171,8 +198,11 @@ export function FieldRenderer({
 
           <span>
             {field.label}
+
             {field.required && (
-              <span className="metadata-form__required"> *</span>
+              <span className="metadata-form__required">
+                {' '}*
+              </span>
             )}
           </span>
         </label>
@@ -186,6 +216,67 @@ export function FieldRenderer({
     )
   }
 
+  /* ========================================
+     Select - AppSelect
+  ======================================== */
+
+  if (field.fieldtype === 'Select') {
+    return (
+      <AppSelect
+        id={id}
+        // className="metadata-form__field"
+        label={field.label}
+        value={valueText}
+        onChange={onChange}
+        placeholder={`Select ${field.label}`}
+        options={(field.select_options ?? []).map((option) => ({
+          value: option,
+          label: option,
+        }))}
+        required={required}
+        disabled={disabled}
+        helperText={helperText}
+      />
+    )
+  }
+
+  /* ========================================
+     Date and Datetime - AppDatePicker
+  ======================================== */
+
+  if (
+    field.fieldtype === 'Date' ||
+    field.fieldtype === 'Datetime'
+  ) {
+    return (
+      <AppDatePicker
+        id={id}
+        // className="metadata-form__field"
+        label={field.label}
+        value={valueText}
+        onChange={onChange}
+        mode={
+          field.fieldtype === 'Datetime'
+            ? 'datetime'
+            : 'date'
+        }
+        placeholder={
+          field.fieldtype === 'Datetime'
+            ? 'Select date and time'
+            : `Select ${field.label}`
+        }
+        required={required}
+        disabled={disabled}
+        clearable={!required}
+        helperText={helperText}
+      />
+    )
+  }
+
+  /* ========================================
+     Remaining field types
+  ======================================== */
+
   const sharedProps = {
     id,
     name: field.fieldname,
@@ -198,23 +289,7 @@ export function FieldRenderer({
 
   let control
 
-  if (field.fieldtype === 'Select') {
-    control = (
-      <select
-        {...sharedProps}
-        value={valueText}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        <option value="">Select {field.label}</option>
-
-        {(field.select_options ?? []).map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    )
-  } else if (TABLE_FIELD_TYPES.has(field.fieldtype)) {
+  if (TABLE_FIELD_TYPES.has(field.fieldtype)) {
     control = (
       <textarea
         {...sharedProps}
@@ -244,8 +319,6 @@ export function FieldRenderer({
       Email: 'email',
       Phone: 'tel',
       Password: 'password',
-      Date: 'date',
-      Datetime: 'datetime-local',
       Time: 'time',
       Color: 'color',
       Int: 'number',
@@ -255,12 +328,10 @@ export function FieldRenderer({
       Rating: 'number',
     }
 
-    const inputType = typeByField[field.fieldtype] ?? 'text'
+    const inputType =
+      typeByField[field.fieldtype] ?? 'text'
 
-    const inputValue =
-      field.fieldtype === 'Datetime' && valueText
-        ? valueText.replace(' ', 'T').slice(0, 16)
-        : valueText
+    const inputValue = valueText
 
     control = (
       <input
@@ -279,11 +350,7 @@ export function FieldRenderer({
               : undefined
         }
         maxLength={field.length}
-        placeholder={
-          field.fieldtype === 'Link'
-            ? `Enter ${field.link_doctypes ?? 'record'} name`
-            : `Enter ${field.label.toLowerCase()}`
-        }
+        placeholder={`Enter ${field.label.toLowerCase()}`}
         onChange={(event) => {
           const nextValue = event.target.value
 
@@ -306,13 +373,16 @@ export function FieldRenderer({
       <label htmlFor={id}>
         <span>
           {field.label}
+
           {field.required && (
-            <span className="metadata-form__required"> *</span>
+            <span className="metadata-form__required">
+              {' '}*
+            </span>
           )}
+
           {field.read_only && (
             <span className="metadata-form__readonly">
-              {' '}
-              · Read only
+              {' '}· Read only
             </span>
           )}
         </span>
@@ -331,14 +401,7 @@ export function FieldRenderer({
 
       {TABLE_FIELD_TYPES.has(field.fieldtype) && (
         <small className="metadata-form__help">
-          {/* Enter a JSON array of child-row objects. The required row
-          structure depends on the linked Frappe child DocType. */}
-        </small>
-      )}
-
-      {field.fieldtype === 'Link' && field.link_doctypes && (
-        <small className="metadata-form__help">
-          Linked DocType: {field.link_doctypes}
+          {/* Child-row structure depends on the linked Frappe DocType. */}
         </small>
       )}
     </div>

@@ -258,3 +258,25 @@
     transition: none;
   }
 }
+
+
+
+
+
+/* ==========================================
+   Reusable control alignment
+========================================== */
+
+.metadata-form > .app-select,
+.metadata-form > .app-date-picker {
+  width: 100%;
+  min-width: 0;
+  align-self: start;
+}
+
+.app-select__label,
+.app-date-picker__label {
+  align-self: flex-start;
+  width: 100%;
+  text-align: left;
+}

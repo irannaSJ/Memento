@@ -56,7 +56,7 @@
 
 .record-create-page__header {
   /* margin: 36px 0 30px; */
-  margin: 0 50px;
+  margin: 0 30px;
 }
 
 .record-create-page__eyebrow,
@@ -117,7 +117,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 25px 30px;
+  padding: 28px 30px 30px;
   border-bottom: 1px solid var(--color-border);
 }
 

@@ -214,3 +214,19 @@
     animation-duration: 1.5s;
   }
 }
+
+
+/* ==========================================
+   LinkField dropdown - open upwards
+========================================== */
+
+.metadata-form [role="listbox"] {
+  position: absolute !important;
+  top: auto !important;
+  bottom: calc(100% + 7px) !important;
+
+  z-index: 6000;
+
+  max-height: min(240px, 35vh);
+  overflow-y: auto;
+}
