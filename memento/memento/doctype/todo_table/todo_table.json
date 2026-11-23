@@ -8,35 +8,16 @@
   "todo",
   "status",
   "user",
-  "time",
-  "end_time",
+  "start_on",
+  "end_on",
   "total_duration"
  ],
  "fields": [
-  {
-   "default": "Pending",
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Status",
-   "options": "Pending\nCompleted",
-   "reqd": 1
-  },
   {
    "fieldname": "user",
    "fieldtype": "Link",
    "label": "User",
    "options": "User"
-  },
-  {
-   "fieldname": "time",
-   "fieldtype": "Datetime",
-   "label": "Start Time"
-  },
-  {
-   "fieldname": "end_time",
-   "fieldtype": "Datetime",
-   "label": "End Time"
   },
   {
    "fieldname": "total_duration",
@@ -49,13 +30,29 @@
    "in_list_view": 1,
    "label": "Todo",
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "status",
+   "fieldtype": "Check",
+   "label": "Status"
+  },
+  {
+   "fieldname": "start_on",
+   "fieldtype": "Datetime",
+   "label": "Start On"
+  },
+  {
+   "fieldname": "end_on",
+   "fieldtype": "Datetime",
+   "label": "End On"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-11-04 16:02:28.928717",
+ "modified": "2026-11-15 20:15:20.210390",
  "modified_by": "Administrator",
  "module": "Memento",
  "name": "ToDo Table",

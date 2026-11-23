@@ -7,92 +7,98 @@
 // };
 
 frappe.pages["timeline"].on_page_load = function (wrapper) {
-  const page = frappe.ui.make_app_page({
-    parent: wrapper,
-    title: "Daily Timeline",
-    single_column: true,
-  });
+    const page = frappe.ui.make_app_page({
+        parent: wrapper,
+        title: "Daily Timeline",
+        single_column: true,
+    });
 
     const options = frappe.route_options || {};
-    const { date, task, project } = options;
+    console.log("route_options", options);
+    // const { date, task } = options;
+
+    const date = options.date || frappe.datetime.nowdate();
+    const task = options.task_id || null;
     // clear so stale data doesn't leak into next visit
     frappe.route_options = null;
+    console.log("date", date);
+    console.log("task", task);
 
-    console.log(date, task, project);
+    frappe.db.get_value('Tasks',task,["task_name","project"])
+        .then(r => {
+            if (r.message) {
+                const task_name = r.message.task_name
+                const project = r.message.project
+                // console.log("project",project)
+                this.page.set_title(__(task_name, project));
+            }
+        })
 
+    $(".page-container").css("background-color", "#ffffff");
+    $("body").css("background-color", "#ffffff");
 
-
-  $(".page-container").css("background-color", "#ffffff");
-  $("body").css("background-color", "#ffffff");
-
-  $(page.body).html(`
+    $(page.body).html(`
         <div style="display: flex; gap: 20px; padding: 15px;">
             <div class="form-footer-wrapper" style="flex: 1;"></div>
             <div class="week-picker-container" style="width: 450px; flex-shrink: 0;"></div>
         </div>
     `);
 
-  const $body = $(page.body);
-  let currentFooter = null;
+    const $body = $(page.body);
+    let currentFooter = null;
 
-  renderWeekPicker($body.find(".week-picker-container"));
+    renderWeekPicker($body.find(".week-picker-container"));
 
   // Function to load or create Task Log by date
   async function loadTaskLogByDate(selectedDate) {
     try {
-      // Format date as YYYY-MM-DD for comparison
-      // console.log("selected date is", selectedDate);
+        // Format date as YYYY-MM-DD for comparison
+        // console.log("selected date is", selectedDate);
 
-      // const dateObj = frappe.datetime.str_to_obj(selectedDate);
-      // console.log("dateObj",dateObj);
+        // const dateObj = frappe.datetime.str_to_obj(selectedDate);
+        // console.log("dateObj",dateObj);
 
-      // const dateStr = dateObj.toISOString().split('T')[0];
-      // console.log("Searching for Task Log with today =", dateStr);
+        // const dateStr = dateObj.toISOString().split('T')[0];
+        // console.log("Searching for Task Log with today =", dateStr);
 
-      console.log("selected date is", selectedDate);
-
-      const dateObj = frappe.datetime.str_to_obj(selectedDate);
-
-      console.log("dateObj", dateObj);
-
-      const dateStr = frappe.datetime.obj_to_str(dateObj);
-
-      console.log("Searching for Task Log with today =", dateStr);
-
-      // Find Task Log(s) matching the selected date
-      const taskLogs = await frappe.call({
-        method: "frappe.client.get_list",
-        args: {
-          doctype: "Task Log",
-          filters: {
-            today: dateStr,
-          },
-          fields: ["name", "today"],
-          limit: 1,
-        },
-      });
+        console.log("selected date is", selectedDate);
+        const dateObj = frappe.datetime.str_to_obj(selectedDate);
+        console.log("dateObj", dateObj);
+        const dateStr = frappe.datetime.obj_to_str(dateObj);
+        console.log("Searching for Task Log with today =", dateStr);
+        // Find Task Log(s) matching the selected date
+        const taskLogs = await frappe.call({
+            method: "frappe.client.get_list",
+            args: {
+                doctype: "Task Log",
+                filters: {today: dateStr},
+                fields: ["name", "today"],
+                limit: 1,
+            },
+        });
 
       let taskLogName;
 
       // If no Task Log exists, create one
       if (!taskLogs.message || taskLogs.message.length === 0) {
-        console.log("No Task Log found, creating new one...");
+        console.log("No Task Log found, creating new one...",task);
 
         const newTaskLog = await frappe.call({
-          method: "frappe.client.insert",
-          args: {
-            doc: {
-              doctype: "Task Log",
-              today: dateStr,
-              members: [
-                {
-                  user: frappe.session.user,
+            method: "frappe.client.insert",
+            args: {
+                    doc: { 
+                        doctype: "Task Log",
+                        today: dateStr,
+                        task_id:task,
+                        members: [
+                            {
+                                user: frappe.session.user,
+                            },
+                        ],
+                    // members:frappe.session.user
+                    // Add any other required fields here
+                    },
                 },
-              ],
-              // members:frappe.session.user
-              // Add any other required fields here
-            },
-          },
         });
 
         if (!newTaskLog.message) {
@@ -137,23 +143,23 @@ frappe.pages["timeline"].on_page_load = function (wrapper) {
       });
 
       // Create mock frm object
-      const frm = {
-        doc,
-        docname: doc.name,
-        doctype: "Task Log",
-        meta: frappe.get_meta("Task Log"),
-        perm: frappe.perm.get_perm("Task Log"),
+        const frm = {
+            doc,
+            docname: doc.name,
+            doctype: "Task Log",
+            meta: frappe.get_meta("Task Log"),
+            perm: frappe.perm.get_perm("Task Log"),
 
-        get_docinfo: function () {
-          return frappe.model.docinfo["Task Log"]?.[taskLogName] || {};
-        },
+            get_docinfo: function () {
+            return frappe.model.docinfo["Task Log"]?.[taskLogName] || {};
+            },
 
-        get_field: () => null,
-        fields_dict: {},
-        events: {},
-        trigger: () => {},
-        dashboard: { reset: () => {} },
-      };
+            get_field: () => null,
+            fields_dict: {},
+            events: {},
+            trigger: () => {},
+            dashboard: { reset: () => {} },
+        };
 
       // Clear previous footer
       $body.find(".form-footer-wrapper").empty();
@@ -180,10 +186,12 @@ frappe.pages["timeline"].on_page_load = function (wrapper) {
     }
   }
 
+  console.log("Im herrrrrrrr...............e",task)
+
   // Listen for date selection
   $body.find(".week-picker-container").on("date-selected", (e, date) => {
-    console.log("Date selected:", date);
-    loadTaskLogByDate(date);
+        console.log("Date selected:", date);
+        loadTaskLogByDate(date);
   });
 
   // Load Task Log for today on page load
