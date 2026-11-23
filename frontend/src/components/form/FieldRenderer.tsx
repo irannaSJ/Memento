@@ -1,6 +1,7 @@
 
 import type { FieldMetadata } from '../../services/mementoApi'
 
+import { AppMultiCombobox } from '../controls/AppMultiCombobox'
 import {
   AppDatePicker,
   AppSelect,
@@ -124,6 +125,75 @@ export function FieldRenderer({
       </div>
     )
   }
+
+
+
+  /* ========================================
+   Table MultiSelect
+======================================== */
+
+if (field.fieldtype === 'Table MultiSelect') {
+  const childLinkField = field.child_fields?.find(
+    (childField) => childField.fieldtype === 'Link',
+  )
+
+  if (!childLinkField || !field.child_doctype) {
+    return (
+      <div className="metadata-form__field">
+        <label className="metadata-form__label">
+          {field.label}
+        </label>
+
+        <p className="metadata-form__help">
+          Multi-select configuration is unavailable.
+        </p>
+      </div>
+    )
+  }
+
+  const selectedRows = Array.isArray(value)
+    ? value as Record<string, unknown>[]
+    : []
+
+  return (
+    <div className="metadata-form__field">
+      <label className="metadata-form__label">
+        {field.label}
+
+        {required && (
+          <span className="metadata-form__required">
+            {' '}*
+          </span>
+        )}
+      </label>
+
+      <AppMultiCombobox
+        sourceDoctype={doctype ?? ''}
+        fieldname={field.fieldname}
+        childFieldname={childLinkField.fieldname}
+        operation={operation}
+        value={selectedRows.map((row) =>
+          String(row[childLinkField.fieldname] ?? ''),
+        ).filter(Boolean)}
+        onChange={(selectedValues) => {
+          onChange(
+            selectedValues.map((selectedValue) => ({
+              [childLinkField.fieldname]: selectedValue,
+            })),
+          )
+        }}
+        disabled={disabled}
+        placeholder={`Search ${field.label.toLowerCase()}...`}
+      />
+
+      {helperText && (
+        <small className="metadata-form__help">
+          {helperText}
+        </small>
+      )}
+    </div>
+  )
+}
 
   /* ========================================
      Rich Text Editor
@@ -289,7 +359,7 @@ export function FieldRenderer({
 
   let control
 
-  if (TABLE_FIELD_TYPES.has(field.fieldtype)) {
+  if (field.fieldtype === 'Table') {
     control = (
       <textarea
         {...sharedProps}

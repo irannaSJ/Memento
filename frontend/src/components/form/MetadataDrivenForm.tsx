@@ -23,13 +23,11 @@ type FormValues = Record<string, unknown>
 
 const TABLE_FIELD_TYPES = new Set([
   'Table',
-  'Table MultiSelect',
 ])
 
 const JSON_FIELD_TYPES = new Set([
   'JSON',
   'Table',
-  'Table MultiSelect',
 ])
 
 function localDate(): string {
@@ -98,7 +96,14 @@ function getInitialValue(
         return htmlToPlainText(value)
       }
 
-    if (JSON_FIELD_TYPES.has(field.fieldtype)) {
+    if (field.fieldtype === 'Table MultiSelect') {
+      return Array.isArray(value) ? value : []
+    }
+
+    if (
+      field.fieldtype === 'Table' ||
+      field.fieldtype === 'JSON'
+    ) {
       return JSON.stringify(value ?? [], null, 2)
     }
 
@@ -110,6 +115,13 @@ function getInitialValue(
     }
 
     return value ?? ''
+  }
+
+
+  if (field.fieldtype === 'Table MultiSelect') {
+    return Array.isArray(field.default)
+      ? field.default
+      : []
   }
 
   if (field.default !== undefined && field.default !== '') {
@@ -219,6 +231,10 @@ function isEmptyFieldValue(
     return true
   }
 
+  if (Array.isArray(value)) {
+    return value.length === 0
+  }
+
   if (typeof value !== 'string') {
     return false
   }
@@ -276,6 +292,24 @@ function buildPayload(
         value === true || value === 1 || value === '1' ? 1 : 0
       continue
     }
+
+
+
+    if (field.fieldtype === 'Table MultiSelect') {
+      if (value === undefined || value === null) {
+        payload[field.fieldname] = []
+      } else if (!Array.isArray(value)) {
+        throw new Error(
+          `${field.label} must be an array.`,
+        )
+      } else {
+        payload[field.fieldname] = value
+      }
+
+      continue
+    }
+
+
 
     if (JSON_FIELD_TYPES.has(field.fieldtype)) {
       if (typeof value === 'string' && !value.trim()) {

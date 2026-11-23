@@ -47,7 +47,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-22 23:44:19.836081",
+ "modified": "2026-11-04 14:13:18.084335",
  "modified_by": "Administrator",
  "module": "Memento",
  "name": "Task Log",
@@ -63,6 +63,18 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Employee",
+   "select": 1,
    "share": 1,
    "write": 1
   }

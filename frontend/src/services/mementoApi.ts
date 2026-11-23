@@ -35,22 +35,44 @@ export type MetadataPurpose =
   | "update"
   | "search";
 
+// export interface FieldMetadata {
+//     fieldname : string;
+//     label : string;
+//     fieldtype : string;
+//     required : boolean;
+//     read_only : boolean;
+//     hidden : boolean;
+//     description? : string;
+//     default? : unknown;
+//     length? : number;
+//     precision?:number;
+//     select_options?:string[];
+//     link_doctypes?:string;
+//     options_field?:string;
+//     child_doctype?:string;
+//     options?: string | null;
+// }
 export interface FieldMetadata {
-    fieldname : string;
-    label : string;
-    fieldtype : string;
-    required : boolean;
-    read_only : boolean;
-    hidden : boolean;
-    description? : string;
-    default? : unknown;
-    length? : number;
-    precision?:number;
-    select_options?:string[];
-    link_doctypes?:string;
-    options_field?:string;
-    child_doctype?:string;
-    options?: string | null;
+  fieldname: string
+  label: string
+  fieldtype: string
+  required: boolean
+  read_only: boolean
+  hidden: boolean
+
+  description?: string
+  default?: unknown
+  length?: number
+  precision?: number | string
+
+  select_options?: string[]
+  options?: string | null
+
+  link_doctypes?: string
+  options_field?: string
+
+  child_doctype?: string
+  child_fields?: FieldMetadata[]
 }
 
 export interface DocTypeMetadata {
@@ -119,6 +141,7 @@ export interface LinkOption {
 export interface SearchLinkOptionsParams {
   source_doctype: string
   fieldname: string
+  child_fieldname?: string
   search?: string
   operation?: 'create' | 'update'
   reference_doctype?: string

@@ -2,13 +2,78 @@
 Central configuration for DocTypes exposed through the Memento API.
 
 Only DocTypes and fields declared here may be exposed by API endpoints.
+
+Child table fields are separately allowlisted under child_table_fields.
 Keep this configuration aligned with the DocType metadata on test.site.
 """
 
 from copy import deepcopy
 
-# These are the only DocTypes the Memento API may expose.
+# ============================================================
+# CHILD TABLE FIELD CONFIGURATION
+# ============================================================
+
+# CHILD_TABLE_FIELDS = {
+#     "Tasks": {
+#         "to_do_table": [
+#             "task",
+#             "status",
+#             "user",
+#             "time",
+#             "end_time",
+#             "total_duration",
+#         ],
+#     },
+
+#     "Task Log": {
+#         "todo": [
+#             "task",
+#             "status",
+#             "user",
+#             "time",
+#             "end_time",
+#             "total_duration",
+#         ],
+#     },
+# }
+CHILD_TABLE_FIELDS = {
+	"Tasks": {
+		"members": [
+			"user",
+		],
+		"to_do_table": [
+			"task",
+			"status",
+			"user",
+			"time",
+			"end_time",
+			"total_duration",
+		],
+	},
+	"Task Log": {
+		"members": [
+			"user",
+		],
+		"todo": [
+			"task",
+			"status",
+			"user",
+			"time",
+			"end_time",
+			"total_duration",
+		],
+	},
+}
+
+
+# ============================================================
+# APPROVED DOCTYPE CONFIGURATION
+# ============================================================
+
 DOCTYPE_CONFIG = {
+	# --------------------------------------------------------
+	# MY PROJECTS
+	# --------------------------------------------------------
 	"My Projects": {
 		"label": "Projects",
 		"list_fields": [
@@ -30,7 +95,9 @@ DOCTYPE_CONFIG = {
 			"description",
 			"created_by",
 		],
-		"search_fields": ["project_name"],
+		"search_fields": [
+			"project_name",
+		],
 		"create_fields": [
 			"project_name",
 			"project_start_time",
@@ -53,6 +120,9 @@ DOCTYPE_CONFIG = {
 		],
 		"default_order_by": "modified desc",
 	},
+	# --------------------------------------------------------
+	# TASKS
+	# --------------------------------------------------------
 	"Tasks": {
 		"label": "Tasks",
 		"list_fields": [
@@ -76,7 +146,9 @@ DOCTYPE_CONFIG = {
 			"members",
 			"created_by",
 		],
-		"search_fields": ["task_name"],
+		"search_fields": [
+			"task_name",
+		],
 		"create_fields": [
 			"task_name",
 			"from_date",
@@ -97,60 +169,172 @@ DOCTYPE_CONFIG = {
 			"description",
 			"members",
 		],
+		"child_table_fields": CHILD_TABLE_FIELDS["Tasks"],
 		"default_order_by": "modified desc",
 	},
+	# --------------------------------------------------------
+	# DAILY TODO
+	# --------------------------------------------------------
 	"Daily ToDo": {
 		"label": "Daily To-Do",
-		"list_fields": ["description", "status", "priority", "start_time", "date"],
-		"form_fields": ["description", "status", "priority", "start_time", "date"],
-		"search_fields": ["description"],
-		"create_fields": ["description", "status", "priority", "start_time", "date"],
-		"update_fields": ["description", "status", "priority", "start_time", "date"],
+		"list_fields": [
+			"description",
+			"status",
+			"priority",
+			"start_time",
+			"date",
+		],
+		"form_fields": [
+			"description",
+			"status",
+			"priority",
+			"start_time",
+			"date",
+		],
+		"search_fields": [
+			"description",
+		],
+		"create_fields": [
+			"description",
+			"status",
+			"priority",
+			"start_time",
+			"date",
+		],
+		"update_fields": [
+			"description",
+			"status",
+			"priority",
+			"start_time",
+			"date",
+		],
 		"default_order_by": "modified desc",
 	},
+	# --------------------------------------------------------
+	# TASK LOG
+	# --------------------------------------------------------
 	"Task Log": {
 		"label": "Activity Logs",
 		"list_fields": [
 			"today",
 			"task_id",
-			# "members",
 		],
 		"form_fields": [
 			"today",
 			"task_id",
-			# "members",
+			"members",
 		],
-		"search_fields": ["task"],
+		"search_fields": [
+			"task_id",
+		],
 		"create_fields": [
 			"today",
 			"task_id",
-			# "members",
+			"members",
 		],
 		"update_fields": [
 			"today",
 			"task_id",
-			# "members",
+			"members",
 		],
+		"child_table_fields": CHILD_TABLE_FIELDS["Task Log"],
 		"default_order_by": "modified desc",
 	},
 }
 
 
+# ============================================================
+# CONFIGURATION HELPERS
+# ============================================================
+
+
 def get_doctype_config(doctype: str) -> dict:
+	"""
+	Return a deep copy of an approved DocType configuration.
+	"""
+
 	config = DOCTYPE_CONFIG.get(doctype)
+
 	if config is None:
-		raise ValueError(f"Doctype is not allowed in Memento API : {doctype}")
+		raise ValueError(f"Doctype is not allowed in Memento API: {doctype}")
+
 	return deepcopy(config)
 
 
 def get_allowed_doctypes() -> list[str]:
+	"""
+	Return all DocTypes exposed through the Memento API.
+	"""
+
 	return list(DOCTYPE_CONFIG.keys())
 
 
-def get_allowed_fields(doctype: str, field_group: str = "list_fields") -> list[str]:
+def get_allowed_fields(
+	doctype: str,
+	field_group: str = "list_fields",
+) -> list[str]:
+	"""
+	Return the allowlisted fields for a DocType and field group.
+	"""
+
 	config = get_doctype_config(doctype)
+
 	fields = config.get(field_group)
 
 	if fields is None:
 		raise ValueError(f"Unknown field group: {field_group}")
+
 	return list(fields)
+
+
+def get_child_table_config(
+	parent_doctype: str,
+	table_fieldname: str,
+) -> list[str]:
+	"""
+	Return the approved child fieldnames for a parent Table field.
+
+	Example:
+	    get_child_table_config("Tasks", "to_do_table")
+
+	Returns:
+	    [
+	        "task",
+	        "status",
+	        "user",
+	        "time",
+	        "end_time",
+	        "total_duration",
+	    ]
+	"""
+
+	config = get_doctype_config(parent_doctype)
+
+	child_tables = config.get("child_table_fields", {})
+
+	allowed_fields = child_tables.get(table_fieldname)
+
+	if not allowed_fields:
+		raise ValueError(
+			f"Child table field '{table_fieldname}' " f"is not configured for DocType '{parent_doctype}'."
+		)
+
+	return list(allowed_fields)
+
+
+def is_child_table_allowed(
+	parent_doctype: str,
+	table_fieldname: str,
+) -> bool:
+	"""
+	Check whether a parent DocType Table field is allowlisted.
+	"""
+
+	config = DOCTYPE_CONFIG.get(parent_doctype)
+
+	if not config:
+		return False
+
+	child_tables = config.get("child_table_fields", {})
+
+	return table_fieldname in child_tables

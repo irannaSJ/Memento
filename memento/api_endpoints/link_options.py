@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 
+from memento.api_endpoints.doctype_config import CHILD_TABLE_FIELDS
 from memento.api_endpoints.permissions import (
 	get_permitted_fields,
 	require_authenticated_user,
@@ -23,9 +24,11 @@ def search_link_options(
 	operation: str = "create",
 	reference_doctype: str | None = None,
 	page_length: int = MAX_PAGE_LENGTH,
+	child_fieldname: str | None = None,
 ) -> dict:
 	"""
-	Search records for a configured Link or Dynamic Link field.
+	Search records for configured Link, Dynamic Link,
+	and Table MultiSelect child Link fields.
 
 	Link targets are not required to be Memento page DocTypes.
 	Target record access is checked separately using Frappe permissions.
@@ -35,8 +38,6 @@ def search_link_options(
 	"""
 	user = require_authenticated_user()
 
-	# Validate the operation and apply the source DocType's existing
-	# configuration and field-level permission rules.
 	field_group = OPERATION_FIELD_GROUPS.get(operation)
 
 	if not field_group:
@@ -65,12 +66,26 @@ def search_link_options(
 			frappe.ValidationError,
 		)
 
-	# A normal Link has a fixed target DocType.
+	target_doctype = ""
+
+	# Normal Link field.
 	if link_field.fieldtype == "Link":
+		if child_fieldname:
+			frappe.throw(
+				_("A child field cannot be specified for a normal Link field."),
+				frappe.ValidationError,
+			)
+
 		target_doctype = (link_field.options or "").strip()
 
-	# A Dynamic Link gets its target DocType from another field.
+	# Dynamic Link field.
 	elif link_field.fieldtype == "Dynamic Link":
+		if child_fieldname:
+			frappe.throw(
+				_("A child field cannot be specified for a Dynamic Link field."),
+				frappe.ValidationError,
+			)
+
 		options_fieldname = (link_field.options or "").strip()
 
 		if options_fieldname not in permitted_fields:
@@ -89,14 +104,12 @@ def search_link_options(
 
 		target_doctype = (reference_doctype or "").strip()
 
-		# The user has not selected the target DocType yet.
 		if not target_doctype:
 			return success_response(
 				data=[],
 				message=_("Select a document type first."),
 			)
 
-		# Validate the chosen target against the controller field.
 		if controller_field.fieldtype == "Select":
 			allowed_types = {
 				option.strip() for option in (controller_field.options or "").splitlines() if option.strip()
@@ -114,9 +127,54 @@ def search_link_options(
 				frappe.ValidationError,
 			)
 
+	# Table MultiSelect field.
+	elif link_field.fieldtype == "Table MultiSelect":
+		child_fieldname = (child_fieldname or "").strip()
+
+		if not child_fieldname:
+			frappe.throw(
+				_("A child field must be specified for a Table MultiSelect field."),
+				frappe.ValidationError,
+			)
+
+		child_doctype = (link_field.options or "").strip()
+
+		if not child_doctype or not frappe.db.exists("DocType", child_doctype):
+			frappe.throw(
+				_("The child DocType is invalid."),
+				frappe.ValidationError,
+			)
+
+		# Verify that this child field is explicitly configured.
+		allowed_child_fields = CHILD_TABLE_FIELDS.get(source_doctype, {}).get(fieldname, [])
+
+		if child_fieldname not in allowed_child_fields:
+			frappe.throw(
+				_("You cannot access this child field."),
+				frappe.PermissionError,
+			)
+
+		child_meta = frappe.get_meta(child_doctype)
+
+		if not child_meta.istable:
+			frappe.throw(
+				_("The configured child DocType is not a child table."),
+				frappe.ValidationError,
+			)
+
+		child_link_field = child_meta.get_field(child_fieldname)
+
+		if not child_link_field or child_link_field.fieldtype != "Link":
+			frappe.throw(
+				_("The selected child field is not a Link field."),
+				frappe.ValidationError,
+			)
+
+		target_doctype = (child_link_field.options or "").strip()
+
 	else:
 		frappe.throw(
-			_("Field {0} is not a Link or Dynamic Link field.").format(fieldname),
+			_("Field {0} is not a supported Link field.").format(fieldname),
 			frappe.ValidationError,
 		)
 
@@ -126,8 +184,7 @@ def search_link_options(
 			frappe.ValidationError,
 		)
 
-	# Do not use get_doctype_config() for the target:
-	# linked targets may legitimately be User, Role, Assignment Rule, etc.
+	# Check permission to read the linked DocType.
 	if not frappe.has_permission(
 		target_doctype,
 		ptype="read",
@@ -140,7 +197,7 @@ def search_link_options(
 
 	target_meta = frappe.get_meta(target_doctype)
 
-	# Include the title only when the current user is allowed to read it.
+	# Include the title only when the current user can read it.
 	permitted_target_fields = set(
 		target_meta.get_permitted_fieldnames(
 			user=user,
@@ -167,7 +224,7 @@ def search_link_options(
 
 	search_text = (search or "").strip()[:100]
 
-	# Search by document name and, where permitted, its title field.
+	# Search by document name and permitted title field.
 	or_filters = []
 
 	if search_text:
@@ -183,7 +240,7 @@ def search_link_options(
 	if display_field and display_field != "name":
 		fields.append(display_field)
 
-	# frappe.get_list applies Frappe's record permission rules.
+	# frappe.get_list applies Frappe record permissions.
 	rows = frappe.get_list(
 		target_doctype,
 		fields=fields,
