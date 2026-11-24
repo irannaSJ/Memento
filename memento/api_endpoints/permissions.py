@@ -52,19 +52,62 @@ def _get_configured_doctype(doctype: str) -> dict:
 	return config
 
 
+CHILD_PARENT_PERMISSION_MAP = {
+	"read": "read",
+	"create": "write",
+	"write": "write",
+	"delete": "write",
+}
+
+
 def require_doctype_permission(
 	doctype: str,
 	permission_type: str = "read",
 	doc: Any = None,
 ) -> bool:
 	user = require_authenticated_user()
-	_get_configured_doctype(doctype)
+	config = _get_configured_doctype(doctype)
 
 	if permission_type not in ALLOWED_PERMISSION_TYPES:
 		frappe.throw(
 			_("Unsupported permission type : {0}").format(permission_type),
 			frappe.ValidationError,
 		)
+
+	# Child table permissions are evaluated against the parent DocType.
+	if config.get("is_child_table"):
+		parent_doctype = config.get("parent_doctype")
+		if not parent_doctype:
+			frappe.throw(
+				_("Parent DocType is not configured for {0}.").format(doctype),
+				frappe.ValidationError,
+			)
+
+		effective_permission = CHILD_PARENT_PERMISSION_MAP.get(permission_type, permission_type)
+		parent_doc = None
+
+		if doc is not None:
+			if getattr(doc, "doctype", None) == doctype and getattr(doc, "parent", None):
+				parent_doc = frappe.get_doc(parent_doctype, doc.parent)
+			elif getattr(doc, "doctype", None) == parent_doctype:
+				parent_doc = doc
+
+		allowed = frappe.has_permission(
+			parent_doctype,
+			ptype=effective_permission,
+			doc=parent_doc,
+			user=user,
+		)
+
+		if not allowed:
+			frappe.throw(
+				_("You do not have {0} permission for {1}.").format(
+					effective_permission,
+					parent_doctype,
+				),
+				frappe.PermissionError,
+			)
+		return True
 
 	if doc is not None:
 		if getattr(doc, "doctype", None) != doctype:
@@ -85,7 +128,7 @@ def require_doctype_permission(
 
 def get_permitted_fields(
 	doctype: str,
-	field_group: str = "list-fields",
+	field_group: str = "list_fields",
 ) -> list[str]:
 	permission_type = FIELD_GROUP_PERMISSIONS.get(field_group)
 	if not permission_type:
@@ -95,7 +138,7 @@ def get_permitted_fields(
 		)
 
 	user = require_authenticated_user()
-	_get_configured_doctype(doctype)
+	config = _get_configured_doctype(doctype)
 
 	# Check DocType-level permission before exposing its configured fields.
 	require_doctype_permission(
@@ -113,34 +156,38 @@ def get_permitted_fields(
 
 	meta = frappe.get_meta(doctype)
 
-	# Frappe calculates field access from the user's roles and permission levels.
-	permitted_meta_fields = set(
-		meta.get_permitted_fieldnames(
-			user=user,
-			permission_type=permission_type,
-			with_virtual_fields=False,
-		)
-	)
-
-	# Table fields may be omitted by the metadata helper because they are not
-	# ordinary value fields. Include them only when their permission level
-	# is allowed for this operation.
-	if meta.get_permissions():
-		permitted_levels = set(
-			meta.get_permlevel_access(
-				permission_type=permission_type,
+	if config.get("is_child_table"):
+		permitted_meta_fields = {field.fieldname for field in meta.fields}
+		if field_group == "create_fields":
+			permitted_meta_fields.add("task_id")
+	else:
+		# Frappe calculates field access from the user's roles and permission levels.
+		permitted_meta_fields = set(
+			meta.get_permitted_fieldnames(
 				user=user,
+				permission_type=permission_type,
+				with_virtual_fields=False,
 			)
 		)
 
-		for field in meta.fields:
-			if field.fieldtype in {"Table", "Table MultiSelect"}:
-				if (field.permlevel or 0) in permitted_levels:
-					permitted_meta_fields.add(field.fieldname)
-	else:
-		# The DocType has no configured permission levels. The central
-		# field allowlist still limits the fields this API can expose.
-		permitted_meta_fields.update(field.fieldname for field in meta.fields)
+		if meta.get_permissions():
+			permitted_levels = set(
+				meta.get_permlevel_access(
+					permission_type=permission_type,
+					user=user,
+				)
+			)
+
+			for field in meta.fields:
+				if field.fieldtype in {"Table", "Table MultiSelect"}:
+					if (field.permlevel or 0) in permitted_levels:
+						permitted_meta_fields.add(field.fieldname)
+		else:
+			permitted_meta_fields.update(field.fieldname for field in meta.fields)
+
+	# Allow parent reference key ('task_id') when creating child table rows.
+	if config.get("is_child_table") and field_group == "create_fields":
+		permitted_meta_fields.add("task_id")
 
 	# Preserve the order defined in doctype_config.py.
 	return [fieldname for fieldname in configured_fields if fieldname in permitted_meta_fields]

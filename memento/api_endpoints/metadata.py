@@ -36,6 +36,19 @@ CHILD_TABLE_FIELD_TYPES = {"Table", "Table MultiSelect"}
 
 
 def _get_operation_capabilities(doctype: str, user: str) -> dict:
+	config = get_doctype_config(doctype)
+
+	if config.get("is_child_table"):
+		parent_doctype = config.get("parent_doctype") or doctype
+		can_read = bool(frappe.has_permission(parent_doctype, ptype="read", user=user))
+		can_write = bool(frappe.has_permission(parent_doctype, ptype="write", user=user))
+		return {
+			"can_read": can_read,
+			"can_create": can_write,
+			"can_update": can_write,
+			"can_delete": can_write,
+		}
+
 	return {
 		"can_read": bool(
 			frappe.has_permission(
@@ -269,6 +282,10 @@ def get_available_doctypes() -> dict:
 	for doctype in get_allowed_doctypes():
 		config = get_doctype_config(doctype)
 
+		# Child tables are embedded inside parent views, not standalone pages.
+		if config.get("is_child_table"):
+			continue
+
 		if not frappe.has_permission(
 			doctype,
 			ptype="read",
@@ -331,14 +348,18 @@ def get_doctype_metadata(
 		permission_type="read",
 	)
 
-	group = PURPOSE_FIELD_GROUPS[purpose]
+	config = get_doctype_config(doctype)
+
+	group = (
+		"form_fields"
+		if config.get("is_child_table") and purpose in {"form", "create", "update"}
+		else PURPOSE_FIELD_GROUPS[purpose]
+	)
 
 	fields = get_permitted_fields(
 		doctype,
 		field_group=group,
 	)
-
-	config = get_doctype_config(doctype)
 
 	field_metadata = []
 

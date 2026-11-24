@@ -37,16 +37,21 @@ from copy import deepcopy
 #     },
 # }
 CHILD_TABLE_FIELDS = {
+	"My Projects": {
+		"members": [
+			"user",
+		],
+	},
 	"Tasks": {
 		"members": [
 			"user",
 		],
-		"to_do_table": [
-			"task",
+		"task_todo": [
+			"todo",
 			"status",
 			"user",
-			"time",
-			"end_time",
+			"start_on",
+			"end_on",
 			"total_duration",
 		],
 	},
@@ -55,11 +60,11 @@ CHILD_TABLE_FIELDS = {
 			"user",
 		],
 		"todo": [
-			"task",
+			"todo",
 			"status",
 			"user",
-			"time",
-			"end_time",
+			"start_on",
+			"end_on",
 			"total_duration",
 		],
 	},
@@ -94,6 +99,8 @@ DOCTYPE_CONFIG = {
 			"status",
 			"description",
 			"created_by",
+			"assigned_by",
+			"members",
 		],
 		"search_fields": [
 			"project_name",
@@ -107,6 +114,8 @@ DOCTYPE_CONFIG = {
 			"status",
 			"description",
 			"created_by",
+			"assigned_by",
+			"members",
 		],
 		"update_fields": [
 			"project_name",
@@ -117,7 +126,10 @@ DOCTYPE_CONFIG = {
 			"status",
 			"description",
 			"created_by",
+			"assigned_by",
+			"members",
 		],
+		"child_table_fields": CHILD_TABLE_FIELDS["My Projects"],
 		"default_order_by": "modified desc",
 	},
 	# --------------------------------------------------------
@@ -144,7 +156,7 @@ DOCTYPE_CONFIG = {
 			"priority",
 			"description",
 			"members",
-			"created_by",
+			"task_todo" "created_by",
 		],
 		"search_fields": [
 			"task_name",
@@ -158,6 +170,7 @@ DOCTYPE_CONFIG = {
 			"priority",
 			"description",
 			"members",
+			"task_todo" "created_by",
 		],
 		"update_fields": [
 			"task_name",
@@ -168,9 +181,23 @@ DOCTYPE_CONFIG = {
 			"priority",
 			"description",
 			"members",
+			"task_todo" "created_by",
 		],
 		"child_table_fields": CHILD_TABLE_FIELDS["Tasks"],
 		"default_order_by": "modified desc",
+	},
+	# Add ToDo Table config for the Task To-Do screen & MetadataDrivenForm:
+	"ToDo Table": {
+		"label": "Task To-Do",
+		"is_child_table": True,
+		"parent_doctype": "Tasks",
+		"parent_field": "task_todo",
+		"list_fields": ["todo", "status", "user", "start_on", "end_on", "total_duration"],
+		"form_fields": ["todo"],
+		"search_fields": ["todo"],
+		"create_fields": ["todo", "task_id"],
+		"update_fields": ["todo", "status"],
+		"default_order_by": "creation desc",
 	},
 	# --------------------------------------------------------
 	# DAILY TODO

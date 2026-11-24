@@ -113,6 +113,119 @@ def _prepare_filters_and_search(
 	return validated_filters, or_filters
 
 
+def _get_child_table_records(
+	doctype: str,
+	config: dict,
+	filters=None,
+	search=None,
+	start=0,
+	page_length=20,
+	order_by=None,
+) -> dict:
+	"""Query child-table rows via permitted parent documents."""
+	pagination = get_pagination(
+		start=start,
+		page_length=page_length,
+	)
+
+	parent_doctype = config["parent_doctype"]
+	parent_field = config["parent_field"]
+
+	parsed_filters = {}
+	if isinstance(filters, str) and filters.strip():
+		parsed_filters = frappe.parse_json(filters)
+	elif isinstance(filters, dict):
+		parsed_filters = dict(filters)
+
+	task_filters = {}
+	if parsed_filters.get("task_id"):
+		task_filters["name"] = parsed_filters["task_id"]
+
+	# Respect parent read permissions automatically via frappe.get_list.
+	permitted_tasks = frappe.get_list(
+		parent_doctype,
+		filters=task_filters,
+		fields=["name", "task_name", "project"],
+		limit_page_length=500,
+	)
+	task_map = {t.name: t for t in permitted_tasks}
+
+	if not task_map:
+		return success_response(
+			data=[],
+			message=f"{config['label']} retrieved successfully.",
+			pagination={
+				"start": pagination["start"],
+				"page_length": pagination["page_length"],
+				"returned": 0,
+				"has_more": False,
+				"next_start": None,
+			},
+		)
+
+	query_fields = _get_queryable_fields(
+		doctype,
+		field_group="list_fields",
+	)
+	child_fields = list(dict.fromkeys(["name", "parent", "creation", "modified", *query_fields]))
+
+	child_filters = {
+		"parent": ["in", list(task_map.keys())],
+		"parenttype": parent_doctype,
+		"parentfield": parent_field,
+	}
+
+	search_term = validate_search_term(search)
+	or_filters = None
+	if search_term:
+		search_fields = _get_queryable_fields(
+			doctype,
+			field_group="search_fields",
+		)
+		if search_fields:
+			or_filters = [[fieldname, "like", f"%{search_term}%"] for fieldname in search_fields]
+
+	validated_order_by = validate_order_by(
+		order_by=order_by,
+		allowed_fields=child_fields,
+		default_order_by=config.get(
+			"default_order_by",
+			"creation desc",
+		),
+	)
+
+	rows = frappe.get_all(
+		doctype,
+		fields=child_fields,
+		filters=child_filters,
+		or_filters=or_filters,
+		order_by=validated_order_by,
+		start=pagination["start"],
+		page_length=pagination["page_length"] + 1,
+	)
+
+	has_more = len(rows) > pagination["page_length"]
+	records = rows[: pagination["page_length"]]
+
+	for row in records:
+		parent_task = task_map.get(row.get("parent"), {})
+		row["task_id"] = row.get("parent") or ""
+		row["task_name"] = parent_task.get("task_name") or row.get("parent") or ""
+		row["project"] = parent_task.get("project") or ""
+
+	return success_response(
+		data=records,
+		message=f"{config['label']} retrieved successfully.",
+		pagination={
+			"start": pagination["start"],
+			"page_length": pagination["page_length"],
+			"returned": len(records),
+			"has_more": has_more,
+			"next_start": (pagination["start"] + pagination["page_length"] if has_more else None),
+		},
+	)
+
+
 @frappe.whitelist(methods=["GET"])
 def get_doctype_records(
 	doctype: str,
@@ -133,6 +246,17 @@ def get_doctype_records(
 	)
 
 	config = get_doctype_config(doctype)
+
+	if config.get("is_child_table"):
+		return _get_child_table_records(
+			doctype=doctype,
+			config=config,
+			filters=filters,
+			search=search,
+			start=start,
+			page_length=page_length,
+			order_by=order_by,
+		)
 
 	pagination = get_pagination(
 		start=start,
@@ -234,7 +358,8 @@ def get_doctype_record(
 	)
 
 	# Apply Frappe's field-level read restrictions before extracting values.
-	doc.apply_fieldlevel_read_permissions()
+	if not getattr(doc.meta, "istable", False):
+		doc.apply_fieldlevel_read_permissions()
 
 	permitted_fields = get_permitted_fields(
 		doctype,
@@ -279,6 +404,25 @@ def get_doctype_count(
 	)
 
 	config = get_doctype_config(doctype)
+
+	if config.get("is_child_table"):
+		result = _get_child_table_records(
+			doctype=doctype,
+			config=config,
+			filters=filters,
+			search=search,
+			start=0,
+			page_length=500,
+		)
+		total = len(result.get("data") or [])
+		return success_response(
+			data={
+				"doctype": doctype,
+				"label": config["label"],
+				"count": total,
+			},
+			message=f"{config['label']} count retrieved successfully.",
+		)
 
 	validated_filters, or_filters = _prepare_filters_and_search(
 		doctype,

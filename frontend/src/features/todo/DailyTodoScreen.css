@@ -1,4 +1,3 @@
-
 .task-todo-screen {
   --todo-surface: var(--color-surface, #ffffff);
   --todo-page: var(--color-page, #faf9f7);
@@ -22,7 +21,8 @@
 
 .task-todo-screen button,
 .task-todo-screen input,
-.task-todo-screen select {
+.task-todo-screen select,
+.task-todo-screen textarea {
   font: inherit;
 }
 
@@ -366,17 +366,15 @@
   flex: 0 0 auto;
   min-width: 0;
   margin-top: 15px;
-  /* padding: 16px 2px 1px; */
-  padding:  15px 16px;
-  border : 1.5px solid var(--todo-border);
-  /* border-top: 1px solid var(--todo-border); */
-  border-radius: 7px;
-  background: transparent;
-  box-shadow: none;
+  padding: 15px 16px;
+  border: 1.5px solid var(--todo-border);
+  border-radius: 14px;
+  background: var(--todo-surface);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 2.5%);
 }
 
 .task-todo-composer.is-editing {
-  border-top-color: var(--todo-accent);
+  border-color: var(--todo-accent);
 }
 
 .task-todo-composer__heading {
@@ -384,12 +382,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .task-todo-composer__heading h2 {
-  margin: 5px 0 0;
-  font-size: 19px;
+  margin: 2px 0 0;
+  font-size: 18px;
   line-height: 1.25;
 }
 
@@ -508,7 +506,7 @@
 
 .task-todo-composer__note {
   grid-column: 1 / -1;
-  margin: 0;
+  margin: 8px 0 0;
   color: var(--todo-muted);
   font-size: 11px;
   line-height: 1.45;
@@ -822,21 +820,6 @@
   }
 }
 
-
-
-
-
-
-
-
-
-
-/* Fixes */
-
-
-
-
-
 /* ==========================================
    LEFT: Borderless checklist workspace
 ========================================== */
@@ -911,86 +894,6 @@
 }
 
 /* ==========================================
-   Desktop equal-height columns
-========================================== */
-
-@media (min-width: 901px) {
-  .task-todo-layout {
-    align-items: stretch;
-  }
-
-  .task-todo-main,
-  .task-todo-sidebar {
-    height: clamp(600px, calc(100vh - 260px), 780px);
-    min-height: 0;
-  }
-
-  .task-todo-list-card,
-  .task-todo-context-card {
-    height: 100%;
-    min-height: 0;
-  }
-
-  .task-todo-list-card {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .task-todo-items-scroll {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-  }
-
-  .task-todo-sidebar {
-    position: static;
-    min-width: 0;
-  }
-
-  .task-todo-context-card {
-    overflow-y: auto;
-  }
-}
-
-/* ==========================================
-   Mobile layout
-========================================== */
-
-@media (max-width: 900px) {
-  .task-todo-main,
-  .task-todo-sidebar {
-    height: auto;
-  }
-
-  .task-todo-list-card,
-  .task-todo-context-card {
-    height: auto;
-  }
-
-  .task-todo-context-card {
-    padding: 17px;
-  }
-
-  .task-todo-item {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-}
-
-@media (max-width: 560px) {
-  .task-todo-item__actions {
-    gap: 7px;
-  }
-
-  .task-todo-item__edit {
-    padding: 7px 9px;
-  }
-}
-
-
-
-
-
-/* ==========================================
    FINAL VIEWPORT HEIGHT AND ALIGNMENT FIX
 ========================================== */
 
@@ -1024,6 +927,11 @@
     overflow-y: auto;
   }
 
+  .task-todo-sidebar {
+    position: static;
+    min-width: 0;
+  }
+
   .task-todo-context-card {
     overflow-y: auto;
   }
@@ -1045,13 +953,30 @@
   .task-todo-list-card {
     min-height: 0;
   }
+
+  .task-todo-context-card {
+    padding: 17px;
+  }
+
+  .task-todo-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
 }
 
+@media (max-width: 560px) {
+  .task-todo-item__actions {
+    gap: 7px;
+  }
+
+  .task-todo-item__edit {
+    padding: 7px 9px;
+  }
+}
 
 /* Hide scrollbar but preserve scrolling */
 .task-todo-items-scroll {
   overflow-y: auto;
-  scrollbar-width: none; 
+  scrollbar-width: none;
   -ms-overflow-style: none;
   scrollbar-gutter: auto;
 }
@@ -1060,4 +985,90 @@
   display: none;
   width: 0;
   height: 0;
+}
+
+/* ==========================================
+   Inline MetadataDrivenForm inside Composer
+========================================== */
+
+.task-todo-composer .metadata-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 0;
+}
+
+/* Textarea spans the full available width of the card */
+.task-todo-composer .metadata-form > .metadata-form__field {
+  grid-column: 1 / 2;
+  margin: 0;
+}
+
+/* Hide redundant field label inside the compact composer card */
+.task-todo-composer .metadata-form__field > label > span:first-child {
+  display: none;
+}
+
+.task-todo-composer .metadata-form__field textarea {
+  width: 100%;
+  min-height: 86px;
+  max-height: 180px;
+  padding: 12px 14px;
+  border: 1px solid var(--todo-border);
+  border-radius: 12px;
+  background: var(--todo-page);
+  color: var(--todo-text);
+  font-size: 13.5px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.task-todo-composer .metadata-form__field textarea:focus {
+  border-color: #9ca3af;
+  outline: 2px solid rgb(156 163 175 / 20%);
+  outline-offset: 1px;
+}
+
+/* Submit button aligned to bottom-right beside the textarea */
+.task-todo-composer .metadata-form > .metadata-form__actions {
+  grid-column: 2 / 3;
+  align-self: end;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.task-todo-composer .metadata-form__actions button.feature-dialog__primary,
+.task-todo-composer .metadata-form__actions button.feature-dialog__secondary {
+  min-height: 38px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Errors and loading states still span full width */
+.task-todo-composer .metadata-form > .metadata-form__error,
+.task-todo-composer .metadata-form > .metadata-form__empty,
+.task-todo-composer .metadata-form > .metadata-form__loading {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 600px) {
+  .task-todo-composer .metadata-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .task-todo-composer .metadata-form > .metadata-form__field,
+  .task-todo-composer .metadata-form > .metadata-form__actions {
+    grid-column: 1 / -1;
+  }
+
+  .task-todo-composer .metadata-form > .metadata-form__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
 }

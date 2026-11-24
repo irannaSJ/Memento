@@ -1,13 +1,10 @@
-
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   mementoApi,
   type MementoRecord,
 } from '../../services/mementoApi'
-import { dailyTodoStorage } from './dailyTodoStorage'
 import type {
-  DailyTodoPriority,
   DailyTodoProjectOption,
   LocalDailyTodoItem,
 } from './dailyTodoTypes'
@@ -16,16 +13,10 @@ import './DailyTodoScreen.css'
 
 import {
   AppDatePicker,
-  AppSelect,
   AppCombobox,
 } from '../../components/controls'
-
-
-const PRIORITIES: DailyTodoPriority[] = ['Low', 'Medium', 'High', 'Urgent']
-const PRIORITY_OPTIONS = PRIORITIES.map((priority) => ({
-  value: priority,
-  label: priority,
-}))
+// Adjust this path if MetadataDrivenForm lives directly under '../../components/MetadataDrivenForm'
+import { MetadataDrivenForm } from '../../components/form/MetadataDrivenForm'
 
 type TodoViewFilter = 'all' | 'open' | 'completed'
 
@@ -43,14 +34,6 @@ interface DailyTodoTaskOption {
   label: string
   projectId: string
   projectLabel: string
-}
-
-function createId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID()
-  }
-
-  return `todo-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
 function formatDateTime(value: string): string {
@@ -104,7 +87,8 @@ export function DailyTodoScreen({
   projectName: contextProjectName = '',
   onBack,
 }: DailyTodoScreenProps) {
-  const [items, setItems] = useState<LocalDailyTodoItem[]>(() => dailyTodoStorage.load())
+  const [items, setItems] = useState<LocalDailyTodoItem[]>([])
+  const [todosLoadNote, setTodosLoadNote] = useState<string | null>(null)
   const [projectOptions, setProjectOptions] = useState<DailyTodoProjectOption[]>([])
   const [projectLoadNote, setProjectLoadNote] = useState<string | null>(null)
   const [taskOptions, setTaskOptions] = useState<DailyTodoTaskOption[]>([])
@@ -118,15 +102,10 @@ export function DailyTodoScreen({
     taskId ? '' : localDateKey(new Date()),
   )
   const [selectedTaskFilter, setSelectedTaskFilter] = useState(taskId || 'all')
-  const [title, setTitle] = useState('')
-  const [priority, setPriority] = useState<DailyTodoPriority>('Medium')
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [formResetKey, setFormResetKey] = useState(0)
 
-  useEffect(() => {
-    dailyTodoStorage.save(items)
-  }, [items])
-
-  // Project choices are loaded from ERPNext; To-Do records remain local.
+  // Load Project choices from ERPNext.
   useEffect(() => {
     if (suppliedProjects !== undefined) return
 
@@ -188,7 +167,7 @@ export function DailyTodoScreen({
     }).catch(() => {
       if (cancelled) return
       setTaskOptions([])
-      setTaskLoadNote('Task choices could not be loaded. Existing local tasks remain available.')
+      setTaskLoadNote('Task choices could not be loaded.')
     })
 
     return () => {
@@ -196,8 +175,60 @@ export function DailyTodoScreen({
     }
   }, [])
 
-  // Keep tasks available even if an older local To-Do refers to one no longer
-  // returned by the backend, and include the Task that opened this screen.
+  // Load Task To-Do child rows from ERPNext.
+  const loadTodos = useCallback(async () => {
+    try {
+      const response = await mementoApi.getDocTypeRecords({
+        doctype: 'ToDo Table',
+        start: 0,
+        page_length: 100,
+      })
+
+      const mapped: LocalDailyTodoItem[] = response.data.map((record: MementoRecord) => {
+        const recordProjectId = typeof record.project === 'string' ? record.project : ''
+        const recordProjectLabel =
+          visibleProjectOptions.find((project) => project.id === recordProjectId)?.label ||
+          recordProjectId
+
+        const startedAt =
+          typeof record.start_on === 'string' && record.start_on
+            ? record.start_on.replace(' ', 'T')
+            : typeof record.creation === 'string' && record.creation
+              ? record.creation.replace(' ', 'T')
+              : new Date().toISOString()
+
+        const completedAt =
+          typeof record.end_on === 'string' && record.end_on
+            ? record.end_on.replace(' ', 'T')
+            : null
+
+        return {
+          id: record.name,
+          title: getText(record.todo) || String(record.todo ?? ''),
+          projectId: recordProjectId,
+          projectLabel: recordProjectLabel,
+          taskId: typeof record.task_id === 'string' ? record.task_id : '',
+          taskLabel: getText(record.task_name) || String(record.task_id ?? ''),
+          priority: 'Medium',
+          completed: Number(record.status) === 1,
+          createdAt: startedAt,
+          startedAt,
+          completedAt,
+          updatedAt: completedAt || startedAt,
+        }
+      })
+
+      setItems(mapped)
+      setTodosLoadNote(null)
+    } catch {
+      setTodosLoadNote('To-Do items could not be loaded from ERPNext.')
+    }
+  }, [visibleProjectOptions])
+
+  useEffect(() => {
+    void loadTodos()
+  }, [loadTodos])
+
   const visibleTaskOptions = useMemo(() => {
     const options = new Map<string, DailyTodoTaskOption>()
 
@@ -229,22 +260,20 @@ export function DailyTodoScreen({
     return [...options.values()].sort((a, b) => a.label.localeCompare(b.label))
   }, [taskOptions, items, taskId, taskName, contextProjectId, contextProjectName])
 
-
   const taskFilterOptions = useMemo(
-  () => [
-    {
-      value: 'all',
-      label: 'All tasks',
-    },
-    ...visibleTaskOptions.map((task) => ({
-      value: task.id,
-      label: task.label,
-      description: task.projectLabel || undefined,
-    })),
-  ],
-  [visibleTaskOptions],
-)
-
+    () => [
+      {
+        value: 'all',
+        label: 'All tasks',
+      },
+      ...visibleTaskOptions.map((task) => ({
+        value: task.id,
+        label: task.label,
+        description: task.projectLabel || undefined,
+      })),
+    ],
+    [visibleTaskOptions],
+  )
 
   const selectedTask = visibleTaskOptions.find(
     (task) => task.id === selectedTaskFilter,
@@ -290,65 +319,41 @@ export function DailyTodoScreen({
   const openCount = scopedItems.length - completedCount
 
   function resetForm() {
-    setTitle('')
-    setPriority('Medium')
     setEditingId(null)
+    setFormResetKey((current) => current + 1)
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
-    const cleanTitle = title.trim()
-    if (!cleanTitle || !activeTaskId) return
-
+  async function toggleCompleted(id: string, completed: boolean) {
     const now = new Date().toISOString()
 
-    if (editingId) {
-      setItems((current) => current.map((item) => item.id === editingId ? {
-        ...item,
-        title: cleanTitle,
-        priority,
-        updatedAt: now,
-      } : item))
-      resetForm()
-      return
+    // Optimistically update UI state
+    setItems((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              completed,
+              completedAt: completed ? now : null,
+              updatedAt: now,
+            }
+          : item,
+      ),
+    )
+
+    try {
+      await mementoApi.updateDocTypeRecord('ToDo Table', id, {
+        status: completed ? 1 : 0,
+      })
+      await loadTodos()
+    } catch {
+      setTodosLoadNote('Could not update To-Do status in ERPNext.')
+      await loadTodos()
     }
-
-    const newItem: LocalDailyTodoItem = {
-      id: createId(),
-      title: cleanTitle,
-      projectId: activeProjectId,
-      projectLabel: activeProjectName,
-      taskId: activeTaskId,
-      taskLabel: activeTaskName || activeTaskId,
-      priority,
-      completed: false,
-      createdAt: now,
-      startedAt: now,
-      completedAt: null,
-      updatedAt: now,
-    }
-
-    setItems((current) => [newItem, ...current])
-    resetForm()
-  }
-
-  function toggleCompleted(id: string, completed: boolean) {
-    const now = new Date().toISOString()
-
-    setItems((current) => current.map((item) => item.id === id ? {
-      ...item,
-      completed,
-      completedAt: completed ? now : null,
-      updatedAt: now,
-    } : item))
   }
 
   function beginEdit(item: LocalDailyTodoItem) {
     setEditingId(item.id)
-    setTitle(item.title)
-    setPriority(item.priority)
-    document.getElementById('task-todo-title')?.focus()
+    setFormResetKey((current) => current + 1)
   }
 
   function handleTaskFilterChange(value: string) {
@@ -366,9 +371,7 @@ export function DailyTodoScreen({
               {taskId ? 'Back to activity logs' : 'Back to tasks'}
             </button>
           )}
-          {/* <span className="task-todo-eyebrow">MEMENTO / TASK WORKSPACE</span> */}
           <h1 id="task-todo-heading">Task To-Do</h1>
-          {/* <p>Break this task into clear actions, track progress, and keep every next step visible.</p> */}
         </div>
 
         <div className="task-todo-header__date">
@@ -382,10 +385,6 @@ export function DailyTodoScreen({
           <section className="task-todo-list-card" aria-labelledby="task-todo-list-heading">
             <div className="task-todo-section-heading">
               <div>
-                {/* <span className="task-todo-eyebrow">YOUR CHECKLIST</span> */}
-                {/* <h2 id="task-todo-list-heading">
-                  {activeTaskName ? `${activeTaskName} · To-Do items` : 'All task To-Dos'}
-                </h2> */}
                 <p>
                   {selectedDate ? formatSelectedDay(selectedDate) : 'Every date'}
                   {' · '}
@@ -433,13 +432,6 @@ export function DailyTodoScreen({
                               {item.taskLabel}
                             </span>
                           )}
-
-                          <span
-                            className={`task-todo-chip task-todo-chip--priority is-${item.priority.toLowerCase()}`}
-                          >
-                            <i className="ri-flag-line" aria-hidden="true" />
-                            {item.priority}
-                          </span>
                         </div>
 
                         <p className="task-todo-item__timestamps">
@@ -458,7 +450,7 @@ export function DailyTodoScreen({
                       </div>
 
                       <div className="task-todo-item__actions">
-                        {/* Completion checkbox on the right */}
+                        {/* Completion checkbox updates status in ERPNext */}
                         <label
                           className="task-todo-item__check"
                           aria-label={`${item.completed ? 'Reopen' : 'Complete'} ${item.title}`}
@@ -467,7 +459,7 @@ export function DailyTodoScreen({
                             type="checkbox"
                             checked={item.completed}
                             onChange={(event) =>
-                              toggleCompleted(item.id, event.target.checked)
+                              void toggleCompleted(item.id, event.target.checked)
                             }
                           />
 
@@ -493,66 +485,54 @@ export function DailyTodoScreen({
               )}
             </div>
 
-            <section className={`task-todo-composer${editingId ? ' is-editing' : ''}`} aria-labelledby="task-todo-composer-heading">
+            <section
+              className={`task-todo-composer${editingId ? ' is-editing' : ''}`}
+              aria-labelledby="task-todo-composer-heading"
+            >
               <div className="task-todo-composer__heading">
                 <div>
-                  <h2 id="task-todo-composer-heading">{editingId ? 'Modify To-Do' : 'Add a To-Do'}</h2>
+                  <h2 id="task-todo-composer-heading">
+                    {editingId ? 'Modify To-Do' : 'Add a To-Do'}
+                  </h2>
                 </div>
                 {editingId && (
-                  <button type="button" className="task-todo-composer__cancel-link" onClick={resetForm}>
+                  <button
+                    type="button"
+                    className="task-todo-composer__cancel-link"
+                    onClick={resetForm}
+                  >
                     Cancel editing
                   </button>
                 )}
               </div>
 
-              <form className="task-todo-composer__form" onSubmit={handleSubmit}>
-                <label className="task-todo-field task-todo-field--title" htmlFor="task-todo-title">
-                  <span>To-do item <b aria-hidden="true">*</b></span>
-                  <input
-                    id="task-todo-title"
-                    type="text"
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                    placeholder="e.g. Complete the API integration"
-                    maxLength={180}
-                    required
-                    autoComplete="off"
-                    aria-label="To-do title"
-                  />
-                  {/* <small>
-                    {activeTaskId
-                      ? 'Press Enter to add the item.'
-                      : 'Choose a Task in the right panel before adding a To-Do.'}
-                  </small> */}
-                </label>
+              {!activeTaskId && !editingId ? (
+                <p className="task-todo-composer__note" role="status">
+                  Choose a Task in the right panel before adding a To-Do.
+                </p>
+              ) : (
+                <MetadataDrivenForm
+                  key={`${editingId ?? 'create'}-${activeTaskId}-${formResetKey}`}
+                  doctype="ToDo Table"
+                  mode={editingId ? 'update' : 'create'}
+                  recordName={editingId ?? undefined}
+                  allowedFieldnames={['todo']}
+                  extraPayload={editingId ? undefined : { task_id: activeTaskId }}
+                  submitText={editingId ? 'Save To-Do' : 'Add To-Do'}
+                  showCancel={Boolean(editingId)}
+                  onCancel={resetForm}
+                  onSuccess={() => {
+                    resetForm()
+                    void loadTodos()
+                  }}
+                />
+              )}
 
-                <AppSelect
-                    className="task-todo-field task-todo-field--priority"
-                    id="task-todo-priority"
-                    label="Priority"
-                    value={priority}
-                    onChange={(value) =>
-                      setPriority(value as DailyTodoPriority)
-                    }
-                    options={PRIORITY_OPTIONS}
-                  />
-
-                <div className="task-todo-composer__actions">
-                  <button
-                    className="task-todo-composer__submit"
-                    type="submit"
-                    disabled={!title.trim() || !activeTaskId}
-                  >
-                    <i className={editingId ? 'ri-save-line' : 'ri-add-line'} aria-hidden="true" />
-                    {editingId ? 'Save To-Do' : 'Add To-Do'}
-                  </button>
-                </div>
-                {(visibleProjectLoadNote || taskLoadNote) && (
-                  <p className="task-todo-composer__note" role="status">
-                    {taskLoadNote || visibleProjectLoadNote}
-                  </p>
-                )}
-              </form>
+              {(visibleProjectLoadNote || taskLoadNote || todosLoadNote) && (
+                <p className="task-todo-composer__note" role="status">
+                  {todosLoadNote || taskLoadNote || visibleProjectLoadNote}
+                </p>
+              )}
             </section>
           </section>
         </section>
@@ -565,13 +545,11 @@ export function DailyTodoScreen({
             <div className="task-todo-context-item">
               <span><i className="ri-folder-3-line" aria-hidden="true" /> PROJECT</span>
               <strong>{activeProjectName || 'No project selected'}</strong>
-              {/* {activeProjectId && <small>{activeProjectId}</small>} */}
             </div>
 
             <div className="task-todo-context-item">
               <span><i className="ri-task-line" aria-hidden="true" /> TASK</span>
               <strong>{activeTaskName || 'All tasks'}</strong>
-              {/* {activeTaskId && <small>{activeTaskId}</small>} */}
             </div>
 
             <div className="task-todo-sidebar-divider" />
@@ -580,15 +558,6 @@ export function DailyTodoScreen({
               <span className="task-todo-eyebrow">REFINE YOUR LIST</span>
               <h3 id="task-todo-filter-heading">Filters</h3>
 
-              {/* <label className="task-todo-field" htmlFor="task-todo-filter-date">
-                <span><i className="ri-calendar-line" aria-hidden="true" /> Day</span>
-                <input
-                  id="task-todo-filter-date"
-                  type="date"
-                  value={selectedDate}
-                  onChange={(event) => setSelectedDate(event.target.value)}
-                />
-              </label> */}
               <AppDatePicker
                 className="task-todo-field"
                 id="task-todo-filter-date"
@@ -626,20 +595,6 @@ export function DailyTodoScreen({
                 ))}
               </div>
 
-              {/* <label className="task-todo-field task-todo-field--task-filter" htmlFor="task-todo-filter-task">
-                <span><i className="ri-task-line" aria-hidden="true" /> Task</span>
-                <select
-                  id="task-todo-filter-task"
-                  value={selectedTaskFilter}
-                  onChange={(event) => handleTaskFilterChange(event.target.value)}
-                >
-                  <option value="all">All tasks</option>
-                  {visibleTaskOptions.map((task) => (
-                    <option key={task.id} value={task.id}>{task.label}</option>
-                  ))}
-                </select>
-              </label> */}
-
               <AppCombobox
                 className="task-todo-field task-todo-field--task-filter"
                 id="task-todo-filter-task"
@@ -660,12 +615,10 @@ export function DailyTodoScreen({
             </div>
 
             <p className="task-todo-local-note">
-            <i className="ri-hard-drive-2-line" aria-hidden="true" />
-            To-Do items are saved locally in this browser for now.
-          </p>
+              <i className="ri-cloud-line" aria-hidden="true" />
+              To-Do items are synced with ERPNext.
+            </p>
           </section>
-
-          
         </aside>
       </div>
     </main>

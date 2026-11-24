@@ -47,6 +47,16 @@ function localDateTime(): string {
   ).padStart(2, '0')}`
 }
 
+function isInlineTodoField(
+  doctype: string,
+  fieldname: string,
+): boolean {
+  // return (
+  //   (doctype === 'Daily ToDo' && fieldname === 'description') ||
+  //   (doctype === 'ToDo Table' && fieldname === 'todo')
+  // )
+  return doctype === 'Daily ToDo' && fieldname === 'description'
+}
 
 function isDailyTodoDescription(
   doctype: string,
@@ -75,11 +85,10 @@ function escapeHtmlText(value: string): string {
     .replace(/'/g, '&#39;')
 }
 
-
 function getInitialValue(
   field: FieldMetadata,
   record?: MementoRecord,
-  doctype = ''
+  doctype = '',
 ): unknown {
   const hasRecordValue =
     record &&
@@ -89,12 +98,11 @@ function getInitialValue(
     const value = record[field.fieldname]
 
     if (
-        doctype === 'Daily ToDo' &&
-        field.fieldname === 'description' &&
-        typeof value === 'string'
-      ) {
-        return htmlToPlainText(value)
-      }
+      isInlineTodoField(doctype, field.fieldname) &&
+      typeof value === 'string'
+    ) {
+      return htmlToPlainText(value)
+    }
 
     if (field.fieldtype === 'Table MultiSelect') {
       return Array.isArray(value) ? value : []
@@ -116,7 +124,6 @@ function getInitialValue(
 
     return value ?? ''
   }
-
 
   if (field.fieldtype === 'Table MultiSelect') {
     return Array.isArray(field.default)
@@ -166,10 +173,6 @@ function getInitialValue(
   return ''
 }
 
-/**
- * Removes temporary browser blob images before saving a record.
- * Temporary preview URLs must never be persisted in Frappe.
- */
 function stripTemporaryImageHtml(html: string): string {
   if (!html) return '<p></p>'
 
@@ -189,10 +192,6 @@ function stripTemporaryImageHtml(html: string): string {
   return parsed.body.innerHTML.trim() || '<p></p>'
 }
 
-/**
- * Replaces temporary preview URLs with permanent Frappe file URLs.
- * Any blob image without a completed upload is removed.
- */
 function resolveTemporaryImageUrls(
   html: string,
   uploadedUrls: Record<string, string>,
@@ -258,7 +257,7 @@ function buildPayload(
   fields: FieldMetadata[],
   values: FormValues,
   mode: FormMode,
-  doctype : string
+  doctype: string,
 ): FormValues {
   const payload: FormValues = {}
 
@@ -270,15 +269,13 @@ function buildPayload(
     const value = values[field.fieldname]
 
     if (field.required && isEmptyFieldValue(field, value)) {
-      const label = isDailyTodoDescription(
-        doctype,
-        field.fieldname,
-      )
+      const label = isInlineTodoField(doctype, field.fieldname)
         ? 'To-do item'
         : field.label
 
       throw new Error(`${label} is required.`)
     }
+
     if (value === undefined || value === null) {
       if (mode === 'update') {
         payload[field.fieldname] = ''
@@ -293,8 +290,6 @@ function buildPayload(
       continue
     }
 
-
-
     if (field.fieldtype === 'Table MultiSelect') {
       if (value === undefined || value === null) {
         payload[field.fieldname] = []
@@ -308,8 +303,6 @@ function buildPayload(
 
       continue
     }
-
-
 
     if (JSON_FIELD_TYPES.has(field.fieldtype)) {
       if (typeof value === 'string' && !value.trim()) {
@@ -336,20 +329,11 @@ function buildPayload(
         }
 
         payload[field.fieldname] = parsed
-      } catch (error : unknown) {
-        // if (
-        //   error instanceof Error &&
-        //   error.message === `${field.label} must be a JSON array.`
-        // ) {
-        //   throw error
-        // }
+      } catch (error: unknown) {
         throw new Error(
-          `Image upload failed : ${getErrorMessage(error)}`,{cause : error},
+          `Image upload failed : ${getErrorMessage(error)}`,
+          { cause: error },
         )
-
-        // throw new Error(
-        //   `${field.label} must contain valid JSON.`,
-        // )
       }
 
       continue
@@ -362,7 +346,6 @@ function buildPayload(
       payload[field.fieldname] = value.replace('T', ' ')
       continue
     }
-
 
     if (
       isDailyTodoDescription(doctype, field.fieldname)
@@ -380,8 +363,6 @@ function buildPayload(
     }
 
     if (typeof value === 'string' && value.trim() === '') {
-      // Omit empty optional fields at creation so backend defaults apply.
-      // For updates, send the empty string to clear the field.
       if (mode === 'update') {
         payload[field.fieldname] = ''
       }
@@ -407,12 +388,20 @@ export function MetadataDrivenForm({
   doctype,
   mode,
   recordName,
+  allowedFieldnames,
+  extraPayload,
+  submitText,
+  showCancel = true,
   onCancel,
   onSuccess,
 }: {
   doctype: string
   mode: FormMode
   recordName?: string
+  allowedFieldnames?: string[]
+  extraPayload?: Record<string, unknown>
+  submitText?: string
+  showCancel?: boolean
   onCancel: () => void
   onSuccess: (record: RecordMutationResult) => void
 }) {
@@ -428,15 +417,12 @@ export function MetadataDrivenForm({
   const [submitting, setSubmitting] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
 
-  // Images selected before a new record exists.
   const [pendingImages, setPendingImages] =
     useState<PendingEditorImage[]>([])
 
-  // Retained after partial failure so retry won't create a duplicate.
   const [createdRecordForImages, setCreatedRecordForImages] =
     useState<RecordMutationResult | null>(null)
 
-  // Successful uploads are retained across retries.
   const [uploadedImageUrls, setUploadedImageUrls] =
     useState<Record<string, string>>({})
 
@@ -467,7 +453,7 @@ export function MetadataDrivenForm({
           initialValues[field.fieldname] = getInitialValue(
             field,
             currentRecord,
-            doctype
+            doctype,
           )
         }
 
@@ -523,7 +509,6 @@ export function MetadataDrivenForm({
       ...new Set(pendingImages.map((image) => image.fieldname)),
     ]
 
-    // Upload only staged images that are still in the current HTML.
     const imagesToUpload =
       mode === 'create'
         ? pendingImages.filter((image) => {
@@ -539,8 +524,6 @@ export function MetadataDrivenForm({
     const retryingCreatedRecord =
       mode === 'create' && createdRecordForImages !== null
 
-    // Saving a record with embedded images needs update permission too,
-    // because the final HTML is saved after the images are uploaded.
     if (
       (imagesToUpload.length > 0 || retryingCreatedRecord) &&
       !metadata.capabilities.can_update
@@ -557,17 +540,26 @@ export function MetadataDrivenForm({
     let savedRecord: RecordMutationResult | null = null
 
     try {
-      const payload = buildPayload(
-        metadata.fields,
+      const activeFields = allowedFieldnames
+        ? metadata.fields.filter((f) =>
+            allowedFieldnames.includes(f.fieldname),
+          )
+        : metadata.fields
+
+      const builtPayload = buildPayload(
+        activeFields,
         values,
         mode,
-        doctype
+        doctype,
       )
+
+      const payload: FormValues = {
+        ...extraPayload,
+        ...builtPayload,
+      }
 
       if (mode === 'create') {
         if (createdRecordForImages) {
-          // A prior attempt already created the record.
-          // Update its regular fields before retrying failed uploads.
           savedRecord = createdRecordForImages
 
           const retryPayload: FormValues = { ...payload }
@@ -587,7 +579,6 @@ export function MetadataDrivenForm({
             retryPayload,
           )
         } else {
-          // Never send temporary browser blob URLs to Frappe.
           const createPayload: FormValues = { ...payload }
 
           for (const fieldname of stagedFieldnames) {
@@ -624,7 +615,6 @@ export function MetadataDrivenForm({
 
           const resolvedUrls = { ...uploadedImageUrls }
 
-          // Upload each currently used image once.
           for (const image of imagesToUpload) {
             if (resolvedUrls[image.previewUrl]) {
               continue
@@ -644,7 +634,6 @@ export function MetadataDrivenForm({
             setUploadedImageUrls({ ...resolvedUrls })
           }
 
-          // Restore HTML, substituting permanent file URLs for previews.
           const descriptionPayload: FormValues = {}
 
           for (const fieldname of stagedFieldnames) {
@@ -696,8 +685,6 @@ export function MetadataDrivenForm({
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error)
 
-      // A record may already exist if an image upload or the final
-      // description update failed. Preserve it for a safe retry.
       if (
         mode === 'create' &&
         savedRecord &&
@@ -732,13 +719,15 @@ export function MetadataDrivenForm({
         </div>
 
         <div className="metadata-form__actions">
-          <button
-            type="button"
-            className="feature-dialog__secondary"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
+          {showCancel && (
+            <button
+              type="button"
+              className="feature-dialog__secondary"
+              onClick={onCancel}
+            >
+              Cancel
+            </button>
+          )}
 
           <button
             type="button"
@@ -762,20 +751,34 @@ export function MetadataDrivenForm({
       : metadata.capabilities.can_update
 
   const visibleFields = metadata.fields.filter(
-    (field) => !field.hidden,
+    (field) =>
+      !field.hidden &&
+      (!allowedFieldnames || allowedFieldnames.includes(field.fieldname)),
   )
 
   const submitLabel =
-    mode === 'create'
+    submitText ??
+    (mode === 'create'
       ? createdRecordForImages
         ? 'Retry image upload'
         : 'Create'
-      : 'Save changes'
+      : 'Save changes')
 
   return (
     <form
       className="feature-dialog__form metadata-form"
       onSubmit={handleSubmit}
+      onKeyDown={(event) => {
+        if (
+          doctype === 'ToDo Table' &&
+          event.key === 'Enter' &&
+          !event.shiftKey &&
+          event.target instanceof HTMLTextAreaElement
+        ) {
+          event.preventDefault()
+          event.currentTarget.requestSubmit()
+        }
+      }}
     >
       {!canSubmit && (
         <div className="metadata-form__error" role="alert">
@@ -789,14 +792,13 @@ export function MetadataDrivenForm({
         </div>
       )}
 
-      
       {visibleFields.length === 0 ? (
         <p className="metadata-form__empty">
           No permitted fields are available for this form.
         </p>
       ) : (
         visibleFields.map((field) => {
-          const renderedField = isDailyTodoDescription(
+          const renderedField = isInlineTodoField(
             doctype,
             field.fieldname,
           )
@@ -805,7 +807,13 @@ export function MetadataDrivenForm({
                 fieldtype: 'Data',
                 label: 'To-do item',
               }
-            : field
+            : doctype === 'ToDo Table' && field.fieldname === 'todo'
+              ? {
+                  ...field,
+                  label: 'To-do item',
+                  description: undefined,
+                }
+              : field
 
           return (
             <FieldRenderer
@@ -832,7 +840,6 @@ export function MetadataDrivenForm({
                     [field.fieldname]: nextValue,
                   }
 
-                  // Clear dependent Dynamic Link values when the target type changes.
                   for (const candidate of metadata?.fields ?? []) {
                     if (
                       candidate.fieldtype === 'Dynamic Link' &&
@@ -850,16 +857,17 @@ export function MetadataDrivenForm({
         })
       )}
 
-
       <div className="metadata-form__actions">
-        <button
-          className="feature-dialog__secondary"
-          type="button"
-          onClick={onCancel}
-          disabled={submitting}
-        >
-          Cancel
-        </button>
+        {showCancel && (
+          <button
+            className="feature-dialog__secondary"
+            type="button"
+            onClick={onCancel}
+            disabled={submitting}
+          >
+            Cancel
+          </button>
+        )}
 
         <button
           className="feature-dialog__primary"
