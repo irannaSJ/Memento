@@ -1,4 +1,3 @@
-
 import {
   useEffect,
   useId,
@@ -6,7 +5,7 @@ import {
   type KeyboardEvent,
 } from 'react'
 
-import AirDatepicker from 'air-datepicker'
+import AirDatepicker, { type AirDatepickerButton } from 'air-datepicker'
 import 'air-datepicker/air-datepicker.css'
 
 import './AppDatePicker.css'
@@ -16,6 +15,7 @@ export interface AppDatePickerProps {
   onChange: (value: string) => void
 
   mode?: 'date' | 'datetime'
+  placement?: 'auto' | 'top' | 'bottom'
 
   label?: string
   placeholder?: string
@@ -109,12 +109,6 @@ const dateLocale = {
 
 /* ==========================================
    Date utilities
-
-   Date:
-   YYYY-MM-DD
-
-   Datetime:
-   YYYY-MM-DD HH:mm:ss
 ========================================== */
 
 function parseDate(value: string): Date | null {
@@ -168,31 +162,15 @@ function parseDate(value: string): Date | null {
 
 function toDateValue(date: Date): string {
   const year = date.getFullYear()
-
-  const month = String(
-    date.getMonth() + 1,
-  ).padStart(2, '0')
-
-  const day = String(
-    date.getDate(),
-  ).padStart(2, '0')
-
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
 
 function toDateTimeValue(date: Date): string {
-  const hours = String(
-    date.getHours(),
-  ).padStart(2, '0')
-
-  const minutes = String(
-    date.getMinutes(),
-  ).padStart(2, '0')
-
-  const seconds = String(
-    date.getSeconds(),
-  ).padStart(2, '0')
-
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
   return `${toDateValue(date)} ${hours}:${minutes}:${seconds}`
 }
 
@@ -210,7 +188,6 @@ function formatDisplayDate(date: Date): string {
 
 function formatDisplayDateTime(date: Date): string {
   const formattedDate = formatDisplayDate(date)
-
   const formattedTime = new Intl.DateTimeFormat('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
@@ -218,6 +195,22 @@ function formatDisplayDateTime(date: Date): string {
   }).format(date)
 
   return `${formattedDate}, ${formattedTime}`
+}
+
+function getNativePosition(
+  input: HTMLInputElement,
+  placement: 'auto' | 'top' | 'bottom',
+): 'top left' | 'bottom left' {
+  if (placement === 'top') return 'top left'
+  if (placement === 'bottom') return 'bottom left'
+
+  const rect = input.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - rect.bottom
+  const spaceAbove = rect.top
+
+  return spaceBelow < 340 && spaceAbove > spaceBelow
+    ? 'top left'
+    : 'bottom left'
 }
 
 /* ==========================================
@@ -228,6 +221,7 @@ export function AppDatePicker({
   value,
   onChange,
   mode = 'date',
+  placement = 'auto',
   label,
   placeholder,
   id,
@@ -247,10 +241,10 @@ export function AppDatePicker({
   const errorId = `${inputId}-error`
   const helperId = `${inputId}-helper`
 
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
   const datepickerRef = useRef<AirDatepicker | null>(null)
-
+  const isOpenRef = useRef(false)
   const onChangeRef = useRef(onChange)
 
   const parsedValue = parseDate(value)
@@ -260,10 +254,6 @@ export function AppDatePicker({
     (mode === 'datetime'
       ? 'Select date and time'
       : 'Select a date')
-
-  /* ========================================
-     Keep latest callback
-  ======================================== */
 
   useEffect(() => {
     onChangeRef.current = onChange
@@ -275,50 +265,53 @@ export function AppDatePicker({
 
   useEffect(() => {
     const input = inputRef.current
-
     if (!input) return
 
     const initialDate = parseDate(value)
 
+    const todayButton: AirDatepickerButton = {
+      content: 'Today',
+      onClick: (dp) => {
+        const now = new Date()
+        dp.setViewDate(now)
+        dp.selectDate(now, { updateTime: true })
+        if (mode === 'date') {
+          dp.hide()
+        }
+      },
+    }
+
+    const buttons: (AirDatepickerButton | 'clear')[] = clearable
+      ? [todayButton, 'clear']
+      : [todayButton]
+
     const datepicker = new AirDatepicker(input, {
       locale: dateLocale,
-
       firstDay: 1,
-
       autoClose: mode === 'date',
-
       keyboardNav: true,
-
-      showEvent: 'focus',
-
+      showEvent: 'click',
       dateFormat: 'dd MMM yyyy',
-
       timepicker: mode === 'datetime',
-
       timeFormat: 'hh:mm aa',
-
       dateTimeSeparator: ', ',
-
-      selectedDates: initialDate
-        ? [initialDate]
-        : [],
-
+      selectedDates: initialDate ? [initialDate] : [],
       minDate: parseDate(minDate ?? '') ?? false,
-
       maxDate: parseDate(maxDate ?? '') ?? false,
-
-      buttons: clearable
-        ? ['today', 'clear']
-        : ['today'],
-
-      position: 'bottom left',
-
+      buttons,
+      position: getNativePosition(input, placement),
       classes: 'memento-air-datepicker',
 
+      onShow: () => {
+        isOpenRef.current = true
+      },
+
+      onHide: () => {
+        isOpenRef.current = false
+      },
+
       onSelect: ({ date }) => {
-        const selectedDate = Array.isArray(date)
-          ? date[0]
-          : date
+        const selectedDate = Array.isArray(date) ? date[0] : date
 
         if (!(selectedDate instanceof Date)) {
           onChangeRef.current('')
@@ -335,14 +328,30 @@ export function AppDatePicker({
 
     datepickerRef.current = datepicker
 
-    return () => {
-      datepicker.destroy()
-      datepickerRef.current = null
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (!isOpenRef.current) return
+
+      const target = event.target as Node | null
+      if (!target) return
+
+      const clickedInsideWrapper = wrapperRef.current?.contains(target) ?? false
+      const clickedInsideCalendar = datepicker.$datepicker.contains(target)
+
+      if (!clickedInsideWrapper && !clickedInsideCalendar) {
+        datepicker.hide()
+      }
     }
 
-    // Reinitialize only when picker mode or clear behavior changes.
+    document.addEventListener('click', handleDocumentClick)
+
+    return () => {
+      document.removeEventListener('click', handleDocumentClick)
+      datepicker.destroy()
+      datepickerRef.current = null
+      isOpenRef.current = false
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, clearable])
+  }, [mode, clearable, placement])
 
   /* ========================================
      Synchronize React value with calendar
@@ -350,23 +359,18 @@ export function AppDatePicker({
 
   useEffect(() => {
     const datepicker = datepickerRef.current
-
     if (!datepicker) return
 
     const selectedDate = parseDate(value)
 
     if (!selectedDate) {
       if (datepicker.selectedDates.length > 0) {
-        datepicker.clear({
-          silent: true,
-        })
+        datepicker.clear({ silent: true })
       }
-
       return
     }
 
     const currentDate = datepicker.selectedDates[0]
-
     const currentValue = currentDate
       ? mode === 'datetime'
         ? toDateTimeValue(currentDate)
@@ -386,10 +390,6 @@ export function AppDatePicker({
     }
   }, [value, mode])
 
-  /* ========================================
-     Update min/max date dynamically
-  ======================================== */
-
   useEffect(() => {
     datepickerRef.current?.update({
       minDate: parseDate(minDate ?? '') ?? false,
@@ -397,24 +397,31 @@ export function AppDatePicker({
     })
   }, [minDate, maxDate])
 
-  /* ========================================
-     Hide calendar when disabled
-  ======================================== */
-
   useEffect(() => {
     if (disabled) {
       datepickerRef.current?.hide()
     }
   }, [disabled])
 
-  /* ========================================
-     Keyboard accessibility
-  ======================================== */
+  function handlePointerDown() {
+    if (disabled || isOpenRef.current) return
+    const input = inputRef.current
+    const datepicker = datepickerRef.current
+    if (!input || !datepicker) return
 
-  function handleKeyDown(
-    event: KeyboardEvent<HTMLInputElement>,
-  ) {
+    datepicker.update({
+      position: getNativePosition(input, placement),
+    })
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (disabled) return
+
+    if (event.key === 'Escape' && isOpenRef.current) {
+      event.preventDefault()
+      datepickerRef.current?.hide()
+      return
+    }
 
     if (
       event.key === 'Enter' ||
@@ -422,13 +429,10 @@ export function AppDatePicker({
       event.key === 'ArrowDown'
     ) {
       event.preventDefault()
+      handlePointerDown()
       datepickerRef.current?.show()
     }
   }
-
-  /* ========================================
-     Render
-  ======================================== */
 
   const describedBy = error
     ? errorId
@@ -444,6 +448,7 @@ export function AppDatePicker({
 
   return (
     <div
+      ref={wrapperRef}
       className={[
         'app-date-picker',
         `app-date-picker--${mode}`,
@@ -483,6 +488,7 @@ export function AppDatePicker({
           aria-haspopup="dialog"
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
+          onPointerDown={handlePointerDown}
           onKeyDown={handleKeyDown}
         />
 

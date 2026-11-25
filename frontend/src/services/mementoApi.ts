@@ -35,23 +35,6 @@ export type MetadataPurpose =
   | "update"
   | "search";
 
-// export interface FieldMetadata {
-//     fieldname : string;
-//     label : string;
-//     fieldtype : string;
-//     required : boolean;
-//     read_only : boolean;
-//     hidden : boolean;
-//     description? : string;
-//     default? : unknown;
-//     length? : number;
-//     precision?:number;
-//     select_options?:string[];
-//     link_doctypes?:string;
-//     options_field?:string;
-//     child_doctype?:string;
-//     options?: string | null;
-// }
 export interface FieldMetadata {
   fieldname: string
   label: string
@@ -112,8 +95,6 @@ export interface RecordMutationResult {
   name: string;
 }
 
-
-
 export interface UploadedFile {
   name: string
   file_name: string
@@ -128,10 +109,7 @@ export interface FileUploadContext {
   docname: string
 }
 
-
-
-
-//related to Link fields:
+// Related to Link fields:
 export interface LinkOption {
   value: string
   label: string
@@ -148,8 +126,31 @@ export interface SearchLinkOptionsParams {
   page_length?: number
 }
 
+// Related to Task Activity Logs & Comments:
+export interface TaskActivityComment {
+  name: string
+  content: string
+  owner: string
+  author_name: string
+  is_owner: boolean
+  creation: string
+  modified: string
+}
 
+export interface TaskLogSummary {
+  name: string
+  today: string
+  task_id: string
+  owner: string
+  creation: string
+  modified: string
+}
 
+export interface TaskActivityResponse {
+  task_log: TaskLogSummary | null
+  comments: TaskActivityComment[]
+  logged_dates: string[]
+}
 
 export class MementoApiError extends Error{
     readonly statusCode : number;
@@ -174,7 +175,6 @@ type JsonObject = {
 function isJsonObject(value : unknown):value is JsonObject {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-
 
 function getCsrfToken() : string | undefined {
     const frappeWindow = window as Window & {
@@ -313,9 +313,7 @@ function appendQueryParams(
     url.search = query.toString();
 }
 
-
-
-//Reusable Function for Api's
+// Reusable Function for APIs
 async function request<T>(
     methodPath : string,
     httpMethod:"GET" | "POST",
@@ -354,7 +352,7 @@ async function request<T>(
         response = await fetch(url.toString(), options);
     }catch{
         throw new MementoApiError(
-            "Unbale to connet to memento. check you connection and confirm that the Frappe server is running.",0,
+            "Unable to connect to memento. Check your connection and confirm that the Frappe server is running.",0,
         );
     }
 
@@ -394,10 +392,7 @@ async function request<T>(
     return result as unknown as ApiResponse<T>;
 }
 
-
-
-//description options
-
+// File upload helper
 async function uploadFileToFrappe(
   file: File,
   context: FileUploadContext,
@@ -487,9 +482,7 @@ async function uploadFileToFrappe(
   return result as unknown as UploadedFile
 }
 
-
-//public api methods
-
+// Public API methods
 export const mementoApi = {
     getAvailableDocTypes() :Promise<ApiResponse<AvailableDocType[]>> {
         return request<AvailableDocType[]>(
@@ -575,7 +568,6 @@ export const mementoApi = {
         );
     },
 
-
     uploadFile(
         file : File,
         context : FileUploadContext,
@@ -583,15 +575,57 @@ export const mementoApi = {
         return uploadFileToFrappe(file,context)
     },
 
-
     searchLinkOptions(
         params: SearchLinkOptionsParams,
-        ): Promise<ApiResponse<LinkOption[]>> {
+    ): Promise<ApiResponse<LinkOption[]>> {
         return request<LinkOption[]>(
             'memento.api_endpoints.link_options.search_link_options',
             'GET',
             params,
         )
-        },
+    },
 
+    getTaskActivity(
+        task_id: string,
+        date: string,
+    ): Promise<ApiResponse<TaskActivityResponse>> {
+        return request<TaskActivityResponse>(
+            "memento.api_endpoints.activity_logs.get_task_activity",
+            "GET",
+            { task_id, date },
+        );
+    },
+
+    addTaskActivityComment(
+        task_id: string,
+        date: string,
+        content: string,
+    ): Promise<ApiResponse<{ task_log: TaskLogSummary; comment: TaskActivityComment }>> {
+        return request<{ task_log: TaskLogSummary; comment: TaskActivityComment }>(
+            "memento.api_endpoints.activity_logs.add_task_activity_comment",
+            "POST",
+            { task_id, date, content },
+        );
+    },
+
+    updateTaskActivityComment(
+        comment_name: string,
+        content: string,
+    ): Promise<ApiResponse<{ comment: TaskActivityComment }>> {
+        return request<{ comment: TaskActivityComment }>(
+            "memento.api_endpoints.activity_logs.update_task_activity_comment",
+            "POST",
+            { comment_name, content },
+        );
+    },
+
+    deleteTaskActivityComment(
+        comment_name: string,
+    ): Promise<ApiResponse<{ name: string }>> {
+        return request<{ name: string }>(
+            "memento.api_endpoints.activity_logs.delete_task_activity_comment",
+            "POST",
+            { comment_name },
+        );
+    },
 }

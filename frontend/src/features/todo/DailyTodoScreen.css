@@ -7,11 +7,21 @@
   --todo-accent: var(--color-focus, #4b46a8);
 
   width: 100%;
-  min-width: 0;
-  margin: 0;
-  padding: 20px 20px 12px;
+  min-width: none;
+  min-height: 100vh;
+  margin-inline : auto;
+  padding: 40px 64px;
   color: var(--todo-text);
   font-size: 14px;
+
+  /* width :100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 100vh;
+  margin-inline: auto;
+  padding: 40px 64px; */
+
+  
 }
 
 .task-todo-screen,
@@ -1071,4 +1081,83 @@
     flex-direction: row;
     justify-content: flex-end;
   }
+}
+
+
+
+
+
+
+
+
+/* Dialog Box */
+/* ==========================================
+   Modify To-Do Modal Dialog
+========================================== */
+
+.todo-edit-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(15 15 15 / 38%);
+  backdrop-filter: blur(3px);
+}
+
+.todo-edit-modal {
+  width: min(540px, 100%);
+  border: 1px solid var(--todo-border);
+  border-radius: 17px;
+  background: var(--todo-surface);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 16%);
+  overflow: hidden;
+}
+
+.todo-edit-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 0;
+}
+
+.todo-edit-modal__header h2 {
+  margin: 5px 0 0;
+  font-size: 20px;
+  line-height: 1.25;
+  letter-spacing: -.02em;
+}
+
+.todo-edit-modal__close {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--todo-border);
+  border-radius: 9px;
+  background: var(--todo-page);
+  color: var(--todo-muted);
+  font-size: 13px;
+}
+
+.todo-edit-modal__close:hover {
+  border-color: var(--todo-text);
+  color: var(--todo-text);
+}
+
+.todo-edit-modal .metadata-form {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 18px 24px 22px;
+}
+
+.todo-edit-modal .metadata-form > .metadata-form__field,
+.todo-edit-modal .metadata-form > .metadata-form__actions {
+  grid-column: 1 / -1;
+}
+
+.todo-edit-modal .metadata-form__field textarea {
+  min-height: 110px;
 }

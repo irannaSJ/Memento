@@ -170,7 +170,8 @@ DOCTYPE_CONFIG = {
 			"priority",
 			"description",
 			"members",
-			"task_todo" "created_by",
+			"task_todo",
+			"created_by",
 		],
 		"update_fields": [
 			"task_name",

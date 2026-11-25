@@ -39,8 +39,12 @@ import { RecordDetailPage } from './features/records/RecordDetailsPage'
 
 import { RecordPage } from './features/records/RecordPage'
 
-// import { DailyTodoRoute } from './features/todo/DailyTodoRoute'
 import { DailyTodoRoute } from './features/todo/DailyTodoRoute'
+
+import { TaskActivityLogScreen } from './features/activity/TaskActivityLogScreen'
+
+import { PersonalDailyTodoScreen } from './features/todo/PersonalDailyTodoScreen'
+
 function RecordsRoute({
   onBack,
 }: {
@@ -58,13 +62,12 @@ function RecordsRoute({
 
   return (
     <RecordPage
-      key={feature.id} 
+      key={feature.id}
       feature={feature}
       onBack={onBack}
     />
   )
 }
-
 
 function RecordDetailRoute() {
   const { featureId, recordName } = useParams<{
@@ -126,6 +129,39 @@ function RecordCreateRoute() {
 
 
 
+function TaskActivityLogRoute() {
+  const { taskId } = useParams<{ taskId: string }>()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const searchParams = new URLSearchParams(location.search)
+
+  const resolvedTaskId =
+    taskId ||
+    searchParams.get('task_id') ||
+    searchParams.get('taskId') ||
+    ''
+  const resolvedTaskName = searchParams.get('task_label') || ''
+  const resolvedProjectId = searchParams.get('project_id') || ''
+  const resolvedProjectName = searchParams.get('project_label') || ''
+
+  return (
+    <TaskActivityLogScreen
+      taskId={resolvedTaskId}
+      taskName={resolvedTaskName}
+      projectId={resolvedProjectId}
+      projectName={resolvedProjectName}
+      onBack={() => navigate('/tasks')}
+      onOpenTaskTodos={({ taskId: id, taskName: tName, projectId: pId, projectName: pName }) => {
+        const params = new URLSearchParams({ task_id: id })
+        if (tName) params.set('task_label', tName)
+        if (pId) params.set('project_id', pId)
+        if (pName) params.set('project_label', pName)
+        navigate(`/daily-todo?${params.toString()}`)
+      }}
+    />
+  )
+}
+
 function MementoApp() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -147,10 +183,21 @@ function MementoApp() {
         location.pathname.startsWith(`/${feature.id}/`),
     )
 
+  const resolvedFeature =
+    currentFeature ??
+    featureCards.find((feature) =>
+      location.pathname.startsWith('/daily-todo')
+        ? feature.id === 'tasks'
+        : location.pathname.startsWith('/activity') ||
+            location.pathname.endsWith('/activity-logs')
+          ? feature.id === 'activity'
+          : false,
+    )
+
   const activeItem: NavigationItemId =
     location.pathname === '/'
       ? dashboardActiveItem
-      : currentFeature?.navItem ?? 'dashboard'
+      : resolvedFeature?.navItem ?? 'dashboard'
 
   const requestDashboardScroll = useCallback(() => {
     navigationSequence.current += 1
@@ -223,12 +270,35 @@ function MementoApp() {
             }
           />
 
+          <Route
+            path="/todo"
+            element={<PersonalDailyTodoScreen onBack={handleBackToOverview} />}
+          />
+
+          <Route
+            path="/daily-todo"
+            element={<DailyTodoRoute />}
+          />
+
+          <Route
+            path="/activity"
+            element={<TaskActivityLogRoute />}
+          />
+
+          <Route
+            path="/activity-logs"
+            element={<TaskActivityLogRoute />}
+          />
+
+          <Route
+            path="/tasks/:taskId/activity-logs"
+            element={<TaskActivityLogRoute />}
+          />
 
           <Route
             path="/:featureId/new"
             element={<RecordCreateRoute />}
           />
-
 
           <Route
             path="/:featureId/:recordName"
@@ -248,12 +318,6 @@ function MementoApp() {
             path="*"
             element={<Navigate to="/" replace />}
           />
-
-            <Route
-            path="/daily-todo"
-            element={<DailyTodoRoute />}
-          />
-
         </Routes>
       </main>
     </div>

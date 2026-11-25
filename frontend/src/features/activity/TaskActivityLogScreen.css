@@ -1,0 +1,670 @@
+.activity-log-screen {
+  --act-surface: var(--color-surface, #ffffff);
+  --act-page: var(--color-page, #faf9f7);
+  --act-text: var(--color-text, #171717);
+  --act-muted: var(--color-muted, #77736f);
+  --act-border: var(--color-border, #e5e2df);
+  --act-accent: #4299e1;
+  --act-avatar-bg: #d9efe3;
+  --act-avatar-text: #276749;
+
+  width: 100%;
+  min-width: 0;
+  padding: 45px 64px;
+  color: var(--act-text);
+  font-size: 14px;
+}
+
+.activity-log-screen,
+.activity-log-screen * {
+  box-sizing: border-box;
+}
+
+.activity-log-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.activity-log-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--act-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.activity-log-back:hover {
+  color: var(--act-text);
+}
+
+.activity-log-eyebrow {
+  display: block;
+  color: var(--act-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.activity-log-header h1 {
+  margin: 6px 0 0;
+  font-size: clamp(28px, 2.6vw, 40px);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.activity-log-todos-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 15px;
+  border: 1px solid var(--act-border);
+  border-radius: 10px;
+  background: var(--act-surface);
+  color: var(--act-text);
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.activity-log-todos-btn:hover {
+  border-color: var(--act-text);
+}
+
+/* 70 / 30 Two-Column Workspace */
+.activity-log-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(320px, 3fr);
+  gap: clamp(18px, 1.8vw, 28px);
+  align-items: stretch;
+}
+
+@media (min-width: 901px) {
+  .activity-log-main,
+  .activity-log-sidebar {
+    height: calc(100svh - 205px);
+    min-height: 480px;
+    max-height: 820px;
+  }
+}
+
+.activity-log-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.activity-log-feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.activity-log-feed-header h2 {
+  margin: 0;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+
+.activity-log-log-badge {
+  padding: 4px 10px;
+  border: 1px solid var(--act-border);
+  border-radius: 999px;
+  background: var(--act-surface);
+  color: var(--act-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.activity-log-timeline-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 6px 12px 2px;
+  scrollbar-width: none;
+}
+
+.activity-log-timeline-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.activity-log-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  padding: 28px;
+  text-align: center;
+  color: var(--act-muted);
+}
+
+.activity-log-empty i {
+  font-size: 26px;
+  margin-bottom: 10px;
+}
+
+.activity-log-empty h3 {
+  margin: 0;
+  color: var(--act-text);
+  font-size: 16px;
+}
+
+.activity-log-empty p {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+/* Vertical Timeline matching ERPNext Activity */
+.activity-timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-timeline__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  padding-bottom: 16px;
+}
+
+.activity-timeline__rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.activity-timeline__row:not(:last-child) .activity-timeline__rail::after {
+  content: '';
+  position: absolute;
+  top: 28px;
+  bottom: -16px;
+  width: 1px;
+  background: var(--act-border);
+}
+
+.activity-timeline__node {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  margin-top: 10px;
+  border: 1px solid var(--act-border);
+  border-radius: 50%;
+  background: var(--act-surface);
+  color: var(--act-muted);
+  font-size: 13px;
+}
+
+.activity-timeline__dot {
+  width: 6px;
+  height: 6px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--act-text);
+}
+
+.activity-timeline__row--system {
+  padding-bottom: 12px;
+}
+
+.activity-timeline__row--system .activity-timeline__rail::after {
+  top: 14px;
+  bottom: -12px;
+}
+
+.activity-timeline__system-text {
+  margin: 2px 0 0;
+  color: var(--act-muted);
+  font-size: 12.5px;
+}
+
+.activity-timeline__system-text strong {
+  color: var(--act-text);
+  font-weight: 600;
+}
+
+/* Comment Card */
+.activity-comment-card {
+  border: 1px solid var(--act-border);
+  border-radius: 12px;
+  background: var(--act-surface);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 2%);
+}
+
+.activity-comment-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--act-border);
+}
+
+.activity-comment-card__author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.activity-avatar {
+  display: inline-grid;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--act-avatar-bg);
+  color: var(--act-avatar-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.activity-comment-card__meta {
+  color: var(--act-muted);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.activity-comment-card__meta strong {
+  color: var(--act-text);
+  font-weight: 600;
+}
+
+.activity-comment-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.activity-comment-card__edit-btn,
+.activity-comment-card__more-btn {
+  border: 0;
+  background: transparent;
+  color: var(--act-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 7px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.activity-comment-card__edit-btn:hover,
+.activity-comment-card__more-btn:hover {
+  background: var(--act-page);
+  color: var(--act-text);
+}
+
+.activity-comment-card__menu-wrap {
+  position: relative;
+}
+
+.activity-comment-card__dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  min-width: 118px;
+  padding: 4px;
+  border: 1px solid var(--act-border);
+  border-radius: 9px;
+  background: var(--act-surface);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 8%);
+}
+
+.activity-comment-card__dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.activity-comment-card__dropdown button.is-danger {
+  color: #c53030;
+}
+
+.activity-comment-card__dropdown button:hover {
+  background: var(--act-page);
+}
+
+.activity-comment-card__body {
+  padding: 13px 16px;
+}
+
+.activity-comment-card__body p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.activity-comment-edit textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--act-border);
+  border-radius: 9px;
+  background: var(--act-page);
+  color: var(--act-text);
+  font: inherit;
+  font-size: 13.5px;
+  resize: vertical;
+}
+
+.activity-comment-edit__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.activity-comment-edit__actions button {
+  min-height: 34px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.activity-comment-edit__actions .btn-secondary {
+  border: 1px solid var(--act-border);
+  background: var(--act-surface);
+  color: var(--act-text);
+}
+
+.activity-comment-edit__actions .btn-primary {
+  border: 1px solid var(--act-text);
+  background: var(--act-text);
+  color: var(--act-surface);
+}
+
+/* Bottom-Anchored Comment Composer */
+.activity-composer {
+  flex: 0 0 auto;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--act-border);
+  border-radius: 14px;
+  background: var(--act-surface);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 2.5%);
+}
+
+.activity-composer__error {
+  margin: 0 0 8px;
+  color: #c53030;
+  font-size: 12px;
+}
+
+.activity-composer__bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.activity-avatar--composer {
+  margin-bottom: 6px;
+}
+
+.activity-composer__bar textarea {
+  width: 100%;
+  min-height: 44px;
+  max-height: 150px;
+  padding: 11px 14px;
+  border: 1px solid var(--act-border);
+  border-radius: 10px;
+  background: var(--act-page);
+  color: var(--act-text);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.activity-composer__bar textarea:focus {
+  border-color: #9ca3af;
+  outline: 2px solid rgb(156 163 175 / 20%);
+  outline-offset: 1px;
+}
+
+.activity-composer__submit {
+  min-height: 42px;
+  padding: 9px 16px;
+  border: 1px solid var(--act-text);
+  border-radius: 10px;
+  background: var(--act-text);
+  color: var(--act-surface);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.activity-composer__submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Right Sidebar: Curved Weekly Calendar + Context Card */
+.activity-log-sidebar {
+  min-width: 0;
+}
+
+.activity-calendar-card {
+  height: 100%;
+  padding: 22px 20px;
+  border: 1px solid var(--act-border);
+  border-radius: 17px;
+  background: var(--act-surface);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 3%);
+  overflow-y: auto;
+}
+
+.activity-arc-calendar {
+  position: relative;
+  padding-top: 6px;
+  text-align: center;
+}
+
+.activity-arc-calendar__arc {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 26px;
+  height: 36px;
+  border-top: 1px solid var(--act-border);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  pointer-events: none;
+}
+
+.activity-arc-calendar__days {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  padding-bottom: 18px;
+}
+
+.activity-arc-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 2px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--act-text);
+  cursor: pointer;
+}
+
+.activity-arc-day__weekday {
+  color: var(--act-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.activity-arc-day__num {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.activity-arc-day:hover .activity-arc-day__num {
+  background: var(--act-page);
+}
+
+.activity-arc-day.is-selected .activity-arc-day__weekday {
+  color: var(--act-accent);
+  font-weight: 650;
+}
+
+.activity-arc-day.is-selected .activity-arc-day__num {
+  background: var(--act-accent);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgb(66 153 225 / 32%);
+}
+
+.activity-arc-day__dot {
+  position: absolute;
+  bottom: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--act-accent);
+}
+
+.activity-arc-calendar__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.activity-arc-calendar__nav button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid var(--act-border);
+  border-radius: 8px;
+  background: var(--act-surface);
+  color: var(--act-muted);
+  cursor: pointer;
+}
+
+.activity-arc-calendar__nav button:hover {
+  border-color: var(--act-text);
+  color: var(--act-text);
+}
+
+.activity-arc-calendar__nav strong {
+  min-width: 120px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.activity-arc-calendar__selected {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--act-muted);
+  font-size: 12px;
+}
+
+.activity-arc-calendar__pill {
+  padding: 4px 10px;
+  border: 1px solid var(--act-border);
+  border-radius: 7px;
+  background: var(--act-page);
+  color: var(--act-text);
+  font-weight: 600;
+}
+
+.activity-sidebar-divider {
+  height: 1px;
+  margin: 20px 0 18px;
+  background: var(--act-border);
+}
+
+.activity-context-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--act-border);
+}
+
+.activity-context-row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--act-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.activity-context-row > strong {
+  font-size: 14.5px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.activity-task-switcher {
+  margin-top: 14px;
+}
+
+.activity-sync-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 14px 0 0;
+  color: var(--act-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .activity-log-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .activity-log-sidebar {
+    grid-row: 1;
+  }
+
+  .activity-log-main {
+    grid-row: 2;
+  }
+}
