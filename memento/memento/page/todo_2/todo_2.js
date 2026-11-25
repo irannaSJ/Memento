@@ -33,6 +33,10 @@ class MementoTodos {
 
     make_layout() {
 
+        const todo_icon=`<div class="todo-header-icon"><i class="fa fa-check-square-o"></i></div>`
+        $(".container .page-head-content").prepend(todo_icon);
+
+        
         this.page.main.html(`
             <div class="memento-todos">
 

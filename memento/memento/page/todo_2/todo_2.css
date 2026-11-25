@@ -1,6 +1,16 @@
 
 /* Main container */
 
+[data-page-route="todo-2"] {
+    --todo-border: var(--border-color);
+    --todo-muted: var(--text-muted);
+    --todo-bg: var(--card-bg);
+    --todo-primary: var(--primary);
+}
+
+
+
+
 .memento-todos {
     --todo-border: var(--border-color);
     --todo-muted: var(--text-muted);

@@ -1,6 +1,14 @@
 
 /* Main two-column layout */
 
+/* this is for todo-icon which is prepended on frappe's .container .page-head-content */
+[data-page-route="todo-2"] {
+    --todo-border: var(--border-color);
+    --todo-muted: var(--text-muted);
+    --todo-bg: var(--card-bg);
+    --todo-primary: var(--primary);
+}
+
 .todo-layout {
     --todo-border: var(--border-color);
     --todo-muted: var(--text-muted);
@@ -15,8 +23,6 @@
     align-items: start;
     width: 100%;
 }
-
-
 
 /* Statistics */
 
@@ -119,6 +125,16 @@
 
 /* Individual todo */
 
+/* 
+.todo-item:hover {
+    transform: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+} */
+/* .todo-item-check {
+    padding-top: 3px;
+} */
+
+
 .todo-item {
     position: relative;
     display: flex;
@@ -132,6 +148,8 @@
     border: 1px solid var(--border-color);
     border-radius: 16px;
 
+    transform: none;
+
     transition:
         background 0.2s ease,
         border-color 0.2s ease,
@@ -139,19 +157,98 @@
         box-shadow 0.2s ease;
 }
 .todo-item:hover {
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */
+    transform: none;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 
-/* 
-.todo-item:hover {
-    transform: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+.todo-item-actions {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    /* margin-top: 10px; */
+    margin: 0;                     /* remove margin-top, it's not needed */
+    /* opacity: 0;
+    transition: opacity 0.2s ease; */
+
+    position: absolute;            /* out of the flow, so it can't change card height */
+    right: 12px;
+    bottom: 10px;  
+
+}
+
+.todo-item:hover .todo-item-actions {
+    /* opacity: 1; */
+    /* border-color: var(--text-muted); */
+    
+    display: flex;
+    animation: todo-actions-appear 0.25s ease 0.35s both;
+}
+
+
+.todo-item:hover .todo-item-actions,
+.todo-item:focus-within .todo-item-actions {
+    display: flex;
+
+    /* fade-in that works even with display: none -> flex */
+    opacity: 1;
+    @starting-style {
+        opacity: 0;
+    }
+    transition: opacity 0.2s ease, display 0.2s allow-discrete;
+}
+
+
+
+/* @keyframes todo-actions-appear {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 } */
-/* .todo-item-check {
-    padding-top: 3px;
-} */
+
+
+
+/* Todo action buttons */
+.todo-item-actions button,
+.todo-editor-actions button {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 11px;
+    padding: 3px 0;
+    cursor: pointer;
+}
+
+.todo-item-actions .todo-delete-btn {
+    border: 1px solid var(--todo-border);
+    border-radius: 10px;
+    padding: 7px;
+    margin: 0;
+}
+
+.todo-item-actions .todo-edit-btn {
+    border: 1px solid var(--todo-border);
+    border-radius: 10px;
+    padding: 7px;
+    margin: 0;
+}
+
+.todo-item-actions button:hover {
+    color: var(--text-color);
+}
+
+.todo-item-actions .todo-delete-btn:hover {
+    color: var(--red-500);
+    border: 1px solid var(--todo-border);
+    border-radius: 10px;
+    padding: 7px 7px;
+    margin: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
 
 /* Checkbox alignment */
 
@@ -196,7 +293,7 @@
 
     transition: all 0.2s ease;
 }
-
+ 
 .todo-checkbox:checked {
     background: var(--text-color);
     border-color: var(--text-color);
@@ -271,8 +368,6 @@
 .todo-item.completed .todo-status-label {
     color: var(--text-muted);
 }
-
-
 /* Empty and loading states */
 
 .todo-empty,
@@ -295,60 +390,6 @@
 
 .todo-empty p {
     font-size: 13px;
-}
-
-/* Todo action buttons */
-
-.todo-item-actions {
-    display: none;
-    align-items: center;
-    gap: 12px;
-    margin-top: 10px;
-    /* opacity: 0;
-    transition: opacity 0.2s ease; */
-
-}
-
-.todo-item:hover .todo-item-actions {
-    /* opacity: 1; */
-    display: flex;
-    animation: todo-actions-appear 0.25s ease 0.35s both;
-   
-    
-}
-
-@keyframes todo-actions-appear {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-
-
-.todo-item-actions button,
-.todo-editor-actions button {
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 11px;
-    padding: 3px 0;
-    cursor: pointer;
-}
-
-.todo-item-actions button:hover {
-    color: var(--text-color);
-}
-
-.todo-item-actions .todo-delete-btn:hover {
-    color: var(--red-500);
-    border: 1px solid var(--todo-border);
-    border-radius: 10px;
-    padding: 7px 7px;
-    margin: 0;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 /* Inline editor */
