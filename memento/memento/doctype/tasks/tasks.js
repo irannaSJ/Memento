@@ -73,8 +73,9 @@ frappe.ui.form.on("Tasks", {
         }
 
         let status_actions = {
+            "Working":__("Working"),
             "Pending": __("Pending"),
-            "Approved": __("Completed"),
+            "Completed": __("Completed"),
         };
 
         Object.keys(status_actions).forEach(status => {

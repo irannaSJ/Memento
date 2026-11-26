@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "format:TSK-{DD}-{MM}-{YYYY}-{#}",
- "creation": "2026-10-16 16:44:10.180947",
+ "creation": "2026-11-25 11:40:36.876172",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -77,7 +77,7 @@
    "options": "User"
   },
   {
-   "depends_on": "doc.task_end_time==1;",
+   "depends_on": "eval:doc.status == \"Completed\";",
    "fieldname": "total_duration",
    "fieldtype": "Duration",
    "label": "Total Duration"
@@ -94,8 +94,7 @@
    "fieldname": "task_start_time",
    "fieldtype": "Datetime",
    "in_list_view": 1,
-   "label": "Task Start Time",
-   "read_only": 1
+   "label": "Task Start Time"
   },
   {
    "fieldname": "task_todo",
@@ -106,7 +105,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-13 19:17:59.549793",
+ "modified": "2026-11-26 11:58:16.789164",
  "modified_by": "Administrator",
  "module": "Memento",
  "name": "Tasks",
