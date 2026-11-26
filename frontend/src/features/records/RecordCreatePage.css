@@ -1,0 +1,282 @@
+/* =========================================================
+   MEMENTO — RECORD CREATE PAGE
+   Full-width responsive layout with navbar clearance.
+   ========================================================= */
+
+.record-create-page {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 100vh;
+  margin: 0;
+  padding: 112px clamp(20px, 4.5vw, 64px) 72px;
+  color: var(--color-text);
+  box-sizing: border-box;
+}
+
+.record-create-page *,
+.record-create-page *::before,
+.record-create-page *::after {
+  box-sizing: border-box;
+}
+
+.record-create-page__container {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+
+/* =========================================================
+   BACK BUTTON & HEADER
+   ========================================================= */
+
+.record-create-page__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  margin: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.record-create-page__back:hover {
+  background: var(--color-hover);
+  transform: translateX(-2px);
+}
+
+.record-create-page__back:active {
+  transform: scale(0.98);
+}
+
+.record-create-page__back:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.record-create-page__back > i {
+  font-size: 15px;
+}
+
+.record-create-page__header {
+  margin: 24px 0 28px;
+}
+
+.record-create-page__eyebrow,
+.record-create-page__section-label {
+  display: block;
+  color: var(--color-muted);
+  font-size: 9.5px;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+}
+
+.record-create-page__title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin-top: 14px;
+}
+
+.record-create-page__icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: color-mix(
+    in srgb,
+    var(--color-focus) 8%,
+    var(--color-surface)
+  );
+  color: var(--color-focus);
+  font-size: 23px;
+}
+
+.record-create-page__title-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.record-create-page__title-copy h1 {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 720;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.record-create-page__title-copy p {
+  max-width: 660px;
+  margin: 8px 0 0;
+  color: var(--color-muted);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+/* =========================================================
+   FORM CARD
+   ========================================================= */
+
+.record-create-page__form-card {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface);
+}
+
+.record-create-page__form-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px clamp(20px, 3vw, 32px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.record-create-page__form-heading h2 {
+  margin: 8px 0 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.record-create-page__form-heading p {
+  margin: 6px 0 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.record-create-page__form-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--color-hover);
+  color: var(--color-focus);
+  font-size: 20px;
+}
+
+.record-create-page__form-body {
+  padding: 26px clamp(20px, 3vw, 32px) 30px;
+}
+
+/* Override dialog layout only inside the standalone create screen. */
+
+.record-create-page .feature-dialog__form {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.record-create-page .metadata-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 22px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* =========================================================
+   RESPONSIVE BREAKPOINTS
+   ========================================================= */
+
+@media (max-width: 1024px) {
+  .record-create-page {
+    padding: 106px 28px 60px;
+  }
+}
+
+@media (max-width: 780px) {
+  .record-create-page {
+    padding: 102px 20px 52px;
+  }
+
+  .record-create-page__header {
+    margin: 20px 0 22px;
+  }
+
+  .record-create-page__title-row {
+    gap: 14px;
+  }
+
+  .record-create-page__icon {
+    width: 46px;
+    height: 46px;
+    flex-basis: 46px;
+    border-radius: 14px;
+    font-size: 21px;
+  }
+
+  .record-create-page__form-card {
+    border-radius: 18px;
+  }
+
+  .record-create-page__form-heading {
+    padding: 20px;
+  }
+
+  .record-create-page__form-body {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 520px) {
+  .record-create-page {
+    padding: 96px 14px 44px;
+  }
+
+  .record-create-page__form-heading {
+    padding: 16px;
+  }
+
+  .record-create-page__form-icon {
+    display: none;
+  }
+
+  .record-create-page__form-body {
+    padding: 18px 14px 22px;
+  }
+
+  .record-create-page .metadata-form__actions {
+    flex-direction: column-reverse;
+  }
+
+  .record-create-page .metadata-form__actions > button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .record-create-page__back {
+    transition: none;
+  }
+
+  .record-create-page__back:hover {
+    transform: none;
+  }
+}

@@ -1,0 +1,910 @@
+/* =========================================================
+   MEMENTO — TASK ACTIVITY LOG SCREEN
+   Viewport-locked desktop workspace: only Activity list scrolls
+   (with hidden scrollbar), plus wheel-curved month calendar.
+   ========================================================= */
+
+.activity-log-screen {
+  --act-surface: var(--color-surface, #ffffff);
+  --act-page: var(--color-page, #faf9f7);
+  --act-text: var(--color-text, #171717);
+  --act-muted: var(--color-muted, #77736f);
+  --act-border: var(--color-border, #e5e2df);
+  --act-accent: #4299e1;
+  --act-avatar-bg: #d9efe3;
+  --act-avatar-text: #276749;
+
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 106px clamp(20px, 4.5vw, 64px) 28px;
+  color: var(--act-text);
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.activity-log-screen *,
+.activity-log-screen *::before,
+.activity-log-screen *::after {
+  box-sizing: border-box;
+}
+
+/* Lock outer viewport on desktop so ONLY the activity/comments feed scrolls */
+@media (min-width: 901px) {
+  .activity-log-screen {
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.activity-log-header {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px 24px;
+  margin-bottom: 18px;
+}
+
+.activity-log-header__left {
+  min-width: 0;
+  flex: 1 1 360px;
+}
+
+.activity-log-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--act-muted);
+  font-size: 12.5px;
+  font-weight: 550;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.activity-log-back:hover {
+  color: var(--act-text);
+  transform: translateX(-3px);
+}
+
+.activity-log-eyebrow {
+  display: block;
+  color: var(--act-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.activity-log-header h1 {
+  margin: 4px 0 0;
+  font-size: clamp(24px, 2.8vw, 38px);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.activity-log-todos-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 15px;
+  border: 1px solid var(--act-border);
+  border-radius: 11px;
+  background: var(--act-surface);
+  color: var(--act-text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.activity-log-todos-btn:hover {
+  border-color: var(--act-text);
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   70 / 30 TWO-COLUMN WORKSPACE
+   ========================================================= */
+
+.activity-log-layout {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  grid-template-columns: minmax(0, 7fr) minmax(320px, 3fr);
+  gap: clamp(18px, 2vw, 28px);
+  align-items: stretch;
+}
+
+.activity-log-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.activity-log-feed-header {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.activity-log-feed-header h2 {
+  margin: 0;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+
+.activity-log-log-badge {
+  padding: 4px 10px;
+  border: 1px solid var(--act-border);
+  border-radius: 999px;
+  background: var(--act-surface);
+  color: var(--act-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Scrollable comments container with completely hidden scrollbar */
+.activity-log-timeline-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 4px 12px 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.activity-log-timeline-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.activity-log-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--act-muted);
+}
+
+.activity-log-empty i {
+  font-size: 26px;
+  margin-bottom: 10px;
+}
+
+.activity-log-empty h3 {
+  margin: 0;
+  color: var(--act-text);
+  font-size: 16px;
+}
+
+.activity-log-empty p {
+  max-width: 420px;
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   VERTICAL TIMELINE
+   ========================================================= */
+
+.activity-timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-timeline__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  padding-bottom: 16px;
+}
+
+.activity-timeline__rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.activity-timeline__row:not(:last-child) .activity-timeline__rail::after {
+  content: '';
+  position: absolute;
+  top: 28px;
+  bottom: -16px;
+  width: 1px;
+  background: var(--act-border);
+}
+
+.activity-timeline__node {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  margin-top: 10px;
+  border: 1px solid var(--act-border);
+  border-radius: 50%;
+  background: var(--act-surface);
+  color: var(--act-muted);
+  font-size: 13px;
+}
+
+.activity-timeline__dot {
+  width: 6px;
+  height: 6px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--act-text);
+}
+
+.activity-timeline__row--system {
+  padding-bottom: 12px;
+}
+
+.activity-timeline__row--system .activity-timeline__rail::after {
+  top: 14px;
+  bottom: -12px;
+}
+
+.activity-timeline__system-text {
+  margin: 2px 0 0;
+  color: var(--act-muted);
+  font-size: 12.5px;
+}
+
+.activity-timeline__system-text strong {
+  color: var(--act-text);
+  font-weight: 600;
+}
+
+/* =========================================================
+   COMMENT CARD
+   ========================================================= */
+
+.activity-comment-card {
+  border: 1px solid var(--act-border);
+  border-radius: 12px;
+  background: var(--act-surface);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 2%);
+}
+
+.activity-comment-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--act-border);
+}
+
+.activity-comment-card__author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.activity-avatar {
+  display: inline-grid;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--act-avatar-bg);
+  color: var(--act-avatar-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.activity-comment-card__meta {
+  color: var(--act-muted);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.activity-comment-card__meta strong {
+  color: var(--act-text);
+  font-weight: 600;
+}
+
+.activity-comment-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.activity-comment-card__edit-btn,
+.activity-comment-card__more-btn {
+  border: 0;
+  background: transparent;
+  color: var(--act-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 7px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.activity-comment-card__edit-btn:hover,
+.activity-comment-card__more-btn:hover {
+  background: var(--act-page);
+  color: var(--act-text);
+}
+
+.activity-comment-card__menu-wrap {
+  position: relative;
+}
+
+.activity-comment-card__dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  min-width: 118px;
+  padding: 4px;
+  border: 1px solid var(--act-border);
+  border-radius: 9px;
+  background: var(--act-surface);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 8%);
+}
+
+.activity-comment-card__dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.activity-comment-card__dropdown button.is-danger {
+  color: #c53030;
+}
+
+.activity-comment-card__dropdown button:hover {
+  background: var(--act-page);
+}
+
+.activity-comment-card__body {
+  padding: 13px 16px;
+}
+
+.activity-comment-card__body p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.activity-comment-edit textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--act-border);
+  border-radius: 9px;
+  background: var(--act-page);
+  color: var(--act-text);
+  font: inherit;
+  font-size: 13.5px;
+  resize: vertical;
+}
+
+.activity-comment-edit__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.activity-comment-edit__actions button {
+  min-height: 34px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.activity-comment-edit__actions .btn-secondary {
+  border: 1px solid var(--act-border);
+  background: var(--act-surface);
+  color: var(--act-text);
+}
+
+.activity-comment-edit__actions .btn-primary {
+  border: 1px solid var(--act-text);
+  background: var(--act-text);
+  color: var(--act-surface);
+}
+
+/* =========================================================
+   BOTTOM-ANCHORED COMMENT COMPOSER
+   ========================================================= */
+
+.activity-composer {
+  flex: 0 0 auto;
+  margin-top: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--act-border);
+  border-radius: 14px;
+  background: var(--act-surface);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 2.5%);
+}
+
+.activity-composer__error {
+  margin: 0 0 8px;
+  color: #c53030;
+  font-size: 12px;
+}
+
+.activity-composer__bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.activity-avatar--composer {
+  margin-bottom: 6px;
+}
+
+.activity-composer__bar textarea {
+  width: 100%;
+  min-height: 44px;
+  max-height: 130px;
+  padding: 10px 14px;
+  border: 1px solid var(--act-border);
+  border-radius: 10px;
+  background: var(--act-page);
+  color: var(--act-text);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.activity-composer__bar textarea:focus {
+  border-color: #9ca3af;
+  outline: 2px solid rgb(156 163 175 / 20%);
+  outline-offset: 1px;
+}
+
+.activity-composer__submit {
+  min-height: 42px;
+  padding: 9px 16px;
+  border: 1px solid var(--act-text);
+  border-radius: 10px;
+  background: var(--act-text);
+  color: var(--act-surface);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.activity-composer__submit:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.activity-composer__submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   RIGHT SIDEBAR: SCROLLABLE CURVED WHEEL CALENDAR + CONTEXT
+   ========================================================= */
+
+.activity-log-sidebar {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.activity-calendar-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px 18px;
+  border: 1px solid var(--act-border);
+  border-radius: 17px;
+  background: var(--act-surface);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 3%);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.activity-calendar-card::-webkit-scrollbar {
+  display: none;
+}
+
+.activity-arc-calendar {
+  position: relative;
+  padding-top: 2px;
+  text-align: center;
+  user-select: none;
+}
+
+/* Curved SVG arc sitting cleanly between weekday labels and date numbers */
+.activity-arc-calendar__svg {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 12px;
+  width: 88%;
+  height: 40px;
+  color: var(--act-border);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Horizontal scrollable curved track with hidden scrollbar */
+.activity-arc-calendar__scroller {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 44% 34px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  cursor: grab;
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 12%,
+    #000 88%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 12%,
+    #000 88%,
+    transparent 100%
+  );
+}
+
+.activity-arc-calendar__scroller:active {
+  cursor: grabbing;
+}
+
+.activity-arc-calendar__scroller::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.activity-arc-calendar__days {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.activity-arc-day {
+  position: relative;
+  display: flex;
+  flex: 0 0 42px;
+  width: 42px;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--act-text);
+  scroll-snap-align: center;
+  cursor: pointer;
+  transform-origin: center 44px;
+  will-change: transform, opacity;
+}
+
+.activity-arc-day__weekday {
+  color: var(--act-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.activity-arc-day__num {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 650;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.activity-arc-day:hover .activity-arc-day__num {
+  background: var(--act-page);
+}
+
+.activity-arc-day.is-selected .activity-arc-day__weekday {
+  color: var(--act-accent);
+  font-weight: 650;
+}
+
+.activity-arc-day.is-selected .activity-arc-day__num {
+  background: var(--act-accent);
+  color: #ffffff;
+  box-shadow: 0 5px 14px rgb(66 153 225 / 34%);
+}
+
+.activity-arc-day__dot {
+  position: absolute;
+  bottom: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--act-accent);
+}
+
+.activity-arc-calendar__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 2px;
+}
+
+.activity-arc-calendar__nav button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid var(--act-border);
+  border-radius: 8px;
+  background: var(--act-surface);
+  color: var(--act-muted);
+  cursor: pointer;
+}
+
+.activity-arc-calendar__nav button:hover {
+  border-color: var(--act-text);
+  color: var(--act-text);
+}
+
+.activity-arc-calendar__nav strong {
+  min-width: 120px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.activity-arc-calendar__selected {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--act-muted);
+  font-size: 12px;
+}
+
+.activity-arc-calendar__pill {
+  padding: 4px 10px;
+  border: 1px solid var(--act-border);
+  border-radius: 7px;
+  background: var(--act-page);
+  color: var(--act-text);
+  font-weight: 600;
+}
+
+.activity-sidebar-divider {
+  height: 1px;
+  margin: 18px 0 16px;
+  background: var(--act-border);
+}
+
+.activity-context-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--act-border);
+}
+
+.activity-context-row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--act-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.activity-context-row > strong {
+  font-size: 14.5px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.activity-task-switcher {
+  margin-top: 14px;
+}
+
+.activity-sync-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 14px 0 0;
+  color: var(--act-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   RESPONSIVE BREAKPOINTS
+   ========================================================= */
+
+@media (max-width: 1120px) {
+  .activity-log-screen {
+    padding: 104px 28px 24px;
+  }
+
+  .activity-log-layout {
+    grid-template-columns: minmax(0, 1.4fr) minmax(290px, 1fr);
+    gap: 18px;
+  }
+}
+
+@media (max-width: 900px) {
+  .activity-log-screen {
+    height: auto;
+    overflow: visible;
+    padding: 102px 20px 44px;
+  }
+
+  .activity-log-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .activity-log-sidebar {
+    grid-row: 1;
+    height: auto;
+  }
+
+  .activity-log-main {
+    grid-row: 2;
+    height: auto;
+  }
+
+  .activity-calendar-card {
+    height: auto;
+    overflow: visible;
+  }
+
+  .activity-log-timeline-scroll {
+    max-height: 55svh;
+  }
+}
+
+@media (max-width: 540px) {
+  .activity-log-screen {
+    padding: 96px 14px 40px;
+  }
+
+  .activity-log-todos-btn {
+    width: 100%;
+  }
+
+  .activity-calendar-card {
+    padding: 16px 14px;
+  }
+
+  .activity-arc-day {
+    flex-basis: 36px;
+    width: 36px;
+  }
+
+  .activity-arc-day__num {
+    width: 28px;
+    height: 28px;
+    font-size: 12.5px;
+  }
+
+  .activity-arc-day__weekday {
+    font-size: 10px;
+  }
+
+  .activity-timeline__row {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .activity-timeline__node {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .activity-composer {
+    padding: 10px 11px;
+  }
+
+  .activity-composer__bar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .activity-avatar--composer {
+    display: none;
+  }
+
+  .activity-composer__submit {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-log-back,
+  .activity-log-todos-btn,
+  .activity-composer__submit,
+  .activity-arc-day__num {
+    transition: none;
+  }
+
+  .activity-log-back:hover,
+  .activity-log-todos-btn:hover,
+  .activity-composer__submit:hover:not(:disabled) {
+    transform: none;
+  }
+}

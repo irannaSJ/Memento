@@ -1,0 +1,220 @@
+
+/* ==========================================
+   Memento AppCombobox
+========================================== */
+
+.app-combobox {
+  --combo-surface: var(--color-surface, #ffffff);
+  --combo-page: var(--color-page, #faf9f7);
+  --combo-text: var(--color-text, #171717);
+  --combo-muted: var(--color-muted, #77736f);
+  --combo-border: var(--color-border, #e5e2df);
+  --combo-focus: #9ca3af;
+
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.app-combobox__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--combo-text);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.app-combobox__required {
+  color: #d65b65;
+}
+
+.app-combobox__control {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+}
+
+.app-combobox__control input {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 68px 0 13px;
+  border: 1px solid var(--combo-border);
+  border-radius: 10px;
+  outline: none;
+  background: var(--combo-surface);
+  color: var(--combo-text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.app-combobox__control input::placeholder {
+  color: var(--combo-muted);
+  font-weight: 400;
+}
+
+.app-combobox__control input:focus {
+  border-color: var(--combo-focus);
+  outline: 2px solid rgb(156 163 175 / 20%);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
+.app-combobox__control input:focus-visible {
+  outline: 2px solid var(--combo-focus);
+  outline-offset: 2px;
+}
+
+
+.app-combobox__arrow {
+  position: absolute;
+  right: 13px;
+  color: var(--combo-muted);
+  font-size: 18px;
+  pointer-events: none;
+}
+
+.app-combobox__clear {
+  position: absolute;
+  right: 37px;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--combo-muted);
+  font-size: 16px;
+}
+
+.app-combobox__clear:hover {
+  background: var(--combo-page);
+  color: var(--combo-text);
+}
+
+/* ==========================================
+   Search results dropdown
+========================================== */
+
+.app-combobox__dropdown {
+  position: absolute;
+  z-index: 2500;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  max-height: 280px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid var(--combo-border);
+  border-radius: 12px;
+  background: var(--combo-surface);
+  box-shadow: 0 14px 35px rgb(0 0 0 / 11%);
+}
+
+.app-combobox__option {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 11px;
+  border-radius: 8px;
+  color: var(--combo-text);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.app-combobox__option:hover,
+.app-combobox__option.is-active {
+  background: var(--combo-page);
+}
+
+.app-combobox__option.is-selected {
+  background: color-mix(
+    in srgb,
+    var(--combo-page) 75%,
+    var(--combo-border)
+  );
+}
+
+.app-combobox__option.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.app-combobox__option-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.app-combobox__option-copy strong {
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.app-combobox__option-copy small {
+  color: var(--combo-muted);
+  font-size: 10px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.app-combobox__selected-icon {
+  flex: 0 0 auto;
+  color: var(--combo-text);
+  font-size: 16px;
+}
+
+.app-combobox__message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 15px 12px;
+  color: var(--combo-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.app-combobox__message--error {
+  padding: 0;
+  color: #d65b65;
+}
+
+.app-combobox.has-error input {
+  border-color: #d65b65;
+}
+
+.app-combobox.is-disabled {
+  opacity: 0.55;
+}
+
+.app-combobox.is-disabled input {
+  cursor: not-allowed;
+}
+
+.app-combobox__control input:disabled {
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-combobox * {
+    transition: none !important;
+  }
+}

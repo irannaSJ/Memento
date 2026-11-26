@@ -1,0 +1,284 @@
+
+/* ==========================================
+   Memento AppSelect
+========================================== */
+
+.app-select {
+  --select-surface: var(--color-surface, #ffffff);
+  --select-page: var(--color-page, #faf9f7);
+  --select-text: var(--color-text, #171717);
+  --select-muted: var(--color-muted, #77736f);
+  --select-border: var(--color-border, #e5e2df);
+  --select-hover: #f3f3f3;
+  --select-focus: #9ca3af;
+
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.app-select__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--select-text);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.app-select__required {
+  color: #d65b65;
+}
+
+/* ==========================================
+   Hidden native select
+========================================== */
+
+.app-select__native {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* ==========================================
+   Dropdown trigger
+========================================== */
+
+.app-select__trigger {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 13px;
+  border: 1px solid var(--select-border);
+  border-radius: 10px;
+  outline: none;
+  background: var(--select-surface);
+  color: var(--select-text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.app-select__trigger:hover:not(:disabled) {
+  border-color: color-mix(
+    in srgb,
+    var(--select-border),
+    var(--select-text) 18%
+  );
+}
+
+.app-select__trigger:focus {
+  border-color: var(--select-focus);
+  outline: 2px solid rgb(156 163 175 / 20%);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
+.app-select__trigger:focus-visible {
+  outline: 2px solid var(--select-focus);
+  outline-offset: 2px;
+}
+
+.app-select__value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--select-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-select__value.is-placeholder {
+  color: var(--select-muted);
+  font-weight: 400;
+}
+
+.app-select__icon {
+  flex: 0 0 auto;
+  color: var(--select-muted);
+  font-size: 19px;
+  transition: transform 160ms ease;
+}
+
+.app-select__icon.is-rotated {
+  transform: rotate(180deg);
+}
+
+.app-select.is-disabled {
+  opacity: 0.55;
+}
+
+.app-select__trigger:disabled {
+  cursor: not-allowed;
+}
+
+.app-select.has-error .app-select__trigger {
+  border-color: #d65b65;
+}
+
+/* ==========================================
+   Floating dropdown
+========================================== */
+
+.app-select__dropdown {
+  position: fixed;
+  z-index: 5000;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--color-border, #e5e2df);
+  border-radius: 12px;
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text, #171717);
+  box-shadow:
+    0 14px 35px rgb(0 0 0 / 10%),
+    0 3px 9px rgb(0 0 0 / 4%);
+
+  animation: app-select-enter 140ms ease-out;
+  overscroll-behavior: contain;
+}
+
+@keyframes app-select-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ==========================================
+   Individual options
+========================================== */
+
+.app-select__option {
+  display: flex;
+  width: 100%;
+  min-height: 39px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 8px;
+  outline: none;
+  background: transparent;
+  color: var(--color-text, #171717);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 450;
+  text-align: left;
+  cursor: pointer;
+
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.app-select__option:hover,
+.app-select__option.is-active {
+  background: var(--select-hover);
+}
+
+.app-select__option.is-selected {
+  background: var(--select-hover);
+  color: var(--select-text);
+  font-weight: 650;
+}
+
+.app-select__option.is-selected.is-active {
+  background: color-mix(
+    in srgb,
+    var(--select-hover),
+    var(--select-text) 5%
+  );
+}
+
+.app-select__option:disabled,
+.app-select__option.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.app-select__check {
+  flex: 0 0 auto;
+  color: #278957;
+  font-size: 17px;
+}
+
+.app-select__empty {
+  padding: 14px 11px;
+  color: var(--select-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ==========================================
+   Validation messages
+========================================== */
+
+.app-select__message {
+  margin: 0;
+  color: var(--select-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.app-select__message--error {
+  color: #d65b65;
+}
+
+/* ==========================================
+   Responsive behavior
+========================================== */
+
+@media (max-width: 480px) {
+  .app-select__trigger {
+    height: 43px;
+  }
+
+  .app-select__option {
+    min-height: 42px;
+    font-size: 13px;
+  }
+}
+
+/* ==========================================
+   Reduced motion
+========================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .app-select *,
+  .app-select__dropdown,
+  .app-select__option {
+    animation: none !important;
+    transition: none !important;
+  }
+}

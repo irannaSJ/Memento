@@ -1,0 +1,858 @@
+/* =========================================================
+   MEMENTO — PERSONAL DAILY TO-DO SCREEN
+   Viewport-locked desktop workspace with navbar clearance,
+   hidden-scrollbar checklist feed, and responsive mobile stack.
+   ========================================================= */
+
+.daily-intent-screen {
+  --daily-surface: var(--color-surface, #ffffff);
+  --daily-page: var(--color-page, #faf9f7);
+  --daily-text: var(--color-text, #171717);
+  --daily-muted: var(--color-muted, #77736f);
+  --daily-border: var(--color-border, #e5e2df);
+  --daily-accent: #c2593f;
+  --daily-accent-soft: #fdf4f1;
+  --daily-accent-border: #f2d5cc;
+  --daily-progress: #218653;
+
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 106px clamp(20px, 4.5vw, 64px) 28px;
+  color: var(--daily-text);
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.daily-intent-screen *,
+.daily-intent-screen *::before,
+.daily-intent-screen *::after {
+  box-sizing: border-box;
+}
+
+.daily-intent-screen button,
+.daily-intent-screen input,
+.daily-intent-screen select,
+.daily-intent-screen textarea {
+  font: inherit;
+}
+
+/* Lock outer viewport on desktop so ONLY the Daily Intentions list scrolls */
+@media (min-width: 901px) {
+  .daily-intent-screen {
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.daily-intent-header {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 18px;
+}
+
+.daily-intent-header__copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.daily-intent-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--daily-muted);
+  font-size: 12.5px;
+  font-weight: 550;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.daily-intent-back:hover {
+  color: var(--daily-text);
+  transform: translateX(-3px);
+}
+
+.daily-intent-eyebrow {
+  display: block;
+  color: var(--daily-accent);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.daily-intent-header h1 {
+  margin: 4px 0 0;
+  font-size: clamp(26px, 2.8vw, 38px);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.daily-intent-header__date {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 3px;
+  padding-bottom: 2px;
+  text-align: right;
+}
+
+.daily-intent-header__date span {
+  color: var(--daily-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.daily-intent-header__date strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+/* =========================================================
+   70 / 30 TWO-COLUMN WORKSPACE
+   ========================================================= */
+
+.daily-intent-layout {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  grid-template-columns: minmax(0, 7fr) minmax(310px, 3fr);
+  gap: clamp(18px, 2vw, 28px);
+  align-items: stretch;
+}
+
+.daily-intent-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.daily-intent-feed-meta {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.daily-intent-feed-meta p {
+  margin: 0;
+  color: var(--daily-muted);
+  font-size: 12.5px;
+}
+
+.daily-intent-pill {
+  padding: 4px 10px;
+  border: 1px solid var(--daily-accent-border);
+  border-radius: 999px;
+  background: var(--daily-accent-soft);
+  color: var(--daily-accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Scrollable intentions list with completely hidden scrollbar */
+.daily-intent-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 2px 10px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.daily-intent-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.daily-intent-items {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* =========================================================
+   INTENTION ITEM CARD
+   ========================================================= */
+
+.daily-intent-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 16px;
+  border: 1px solid var(--daily-border);
+  border-left: 3px solid var(--daily-accent);
+  border-radius: 12px;
+  background: var(--daily-surface);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.daily-intent-item:hover {
+  box-shadow: 0 5px 15px rgb(0 0 0 / 3%);
+}
+
+.daily-intent-item.is-completed {
+  border-left-color: var(--daily-progress);
+  opacity: 0.85;
+}
+
+.daily-intent-item__content {
+  min-width: 0;
+}
+
+.daily-intent-item__content h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.daily-intent-item.is-completed .daily-intent-item__content h3 {
+  color: #858585;
+  text-decoration: line-through;
+}
+
+.daily-intent-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.daily-intent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid var(--daily-border);
+  border-radius: 7px;
+  color: var(--daily-muted);
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.daily-intent-badge.is-overdue {
+  background: #fff0f1;
+  border-color: #f4d7db;
+  color: #b23f50;
+  font-weight: 650;
+}
+
+.daily-intent-badge--priority {
+  font-weight: 650;
+}
+
+.daily-intent-badge--priority.is-low {
+  background: #f2f7f1;
+  border-color: #e1ecdf;
+  color: #4e724b;
+}
+
+.daily-intent-badge--priority.is-medium {
+  background: #f8f5e9;
+  border-color: #eee5c9;
+  color: #8a6a24;
+}
+
+.daily-intent-badge--priority.is-high {
+  background: #fff0e8;
+  border-color: #f7ddce;
+  color: #aa552d;
+}
+
+.daily-intent-badge--priority.is-urgent {
+  background: #fff0f1;
+  border-color: #f4d7db;
+  color: #b23f50;
+}
+
+.daily-intent-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.daily-intent-check {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 25px;
+  width: 25px;
+  height: 25px;
+  cursor: pointer;
+}
+
+.daily-intent-check input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.daily-intent-check > span {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border: 1.5px solid var(--daily-border);
+  border-radius: 7px;
+  background: var(--daily-surface);
+  color: transparent;
+  font-size: 16px;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.daily-intent-check input:checked + span {
+  border-color: var(--daily-progress);
+  background: #e8f5ed;
+  color: var(--daily-progress);
+}
+
+.daily-intent-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid var(--daily-border);
+  border-radius: 8px;
+  background: var(--daily-surface);
+  color: var(--daily-muted);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.daily-intent-edit-btn:hover {
+  border-color: var(--daily-accent);
+  color: var(--daily-accent);
+}
+
+.daily-intent-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--daily-muted);
+}
+
+.daily-intent-empty__icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  margin-bottom: 10px;
+  border-radius: 13px;
+  background: var(--daily-accent-soft);
+  color: var(--daily-accent);
+  font-size: 22px;
+}
+
+.daily-intent-empty h3 {
+  margin: 0;
+  color: var(--daily-text);
+  font-size: 16px;
+}
+
+.daily-intent-empty p {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+/* =========================================================
+   BOTTOM-ANCHORED COMPOSER CARD
+   ========================================================= */
+
+.daily-intent-composer {
+  flex: 0 0 auto;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--daily-border);
+  border-top: 2.5px solid var(--daily-accent);
+  border-radius: 14px;
+  background: var(--daily-surface);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 2.5%);
+}
+
+.daily-intent-composer__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.daily-intent-composer__top h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.daily-intent-composer__top span {
+  color: var(--daily-muted);
+  font-size: 11px;
+}
+
+.daily-intent-composer__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.daily-intent-composer__body textarea {
+  width: 100%;
+  min-height: 64px;
+  max-height: 150px;
+  padding: 10px 13px;
+  border: 1px solid var(--daily-border);
+  border-radius: 10px;
+  background: var(--daily-page);
+  color: var(--daily-text);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.daily-intent-composer__body textarea:focus {
+  border-color: var(--daily-accent);
+  outline: 2px solid rgb(194 89 63 / 16%);
+  outline-offset: 1px;
+}
+
+.daily-intent-composer__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.daily-intent-composer__meta-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(145px, 190px));
+  gap: 10px;
+}
+
+.daily-intent-composer__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 9px 18px;
+  border: 1px solid var(--daily-accent);
+  border-radius: 10px;
+  background: var(--daily-accent);
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.daily-intent-composer__submit:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.daily-intent-composer__submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.daily-intent-composer__note {
+  margin: 8px 0 0;
+  color: #b23f50;
+  font-size: 12px;
+}
+
+/* =========================================================
+   RIGHT SIDEBAR: PROGRESS OVERVIEW & FILTERS CARD
+   ========================================================= */
+
+.daily-intent-sidebar {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.daily-intent-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px 20px;
+  border: 1px solid var(--daily-border);
+  border-radius: 17px;
+  background: var(--daily-surface);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 3%);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.daily-intent-card::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.daily-intent-card > h2 {
+  margin: 6px 0 13px;
+  font-size: 20px;
+}
+
+.daily-intent-card > h3 {
+  margin: 6px 0 13px;
+  font-size: 18px;
+}
+
+.daily-progress-box {
+  padding: 13px 14px;
+  border: 1px solid var(--daily-accent-border);
+  border-radius: 12px;
+  background: var(--daily-accent-soft);
+}
+
+.daily-progress-box__labels {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.daily-progress-box__labels strong {
+  font-size: 14px;
+  color: var(--daily-text);
+}
+
+.daily-progress-box__labels span {
+  color: var(--daily-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.daily-progress-bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 8%);
+  overflow: hidden;
+}
+
+.daily-progress-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--daily-progress);
+  transition: width 220ms ease;
+}
+
+.daily-sidebar-divider {
+  height: 1px;
+  margin: 16px 0;
+  background: var(--daily-border);
+}
+
+.daily-quick-dates {
+  display: flex;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.daily-quick-dates button {
+  min-height: 32px;
+  padding: 5px 11px;
+  border: 1px solid var(--daily-border);
+  border-radius: 8px;
+  background: var(--daily-page);
+  color: var(--daily-muted);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.daily-quick-dates button[aria-pressed='true'] {
+  border-color: var(--daily-accent);
+  background: var(--daily-accent-soft);
+  color: var(--daily-accent);
+}
+
+.daily-filter-group {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--daily-border);
+}
+
+.daily-filter-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--daily-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.daily-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.daily-filter-pills button {
+  min-height: 33px;
+  padding: 6px 10px;
+  border: 1px solid var(--daily-border);
+  border-radius: 8px;
+  background: var(--daily-page);
+  color: var(--daily-muted);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.daily-filter-pills button.is-active {
+  border-color: var(--daily-accent);
+  background: var(--daily-accent);
+  color: #ffffff;
+}
+
+.daily-sync-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 16px 0 0;
+  color: var(--daily-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   MODIFY DAILY TO-DO DIALOG
+   ========================================================= */
+
+.daily-edit-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(15 15 15 / 38%);
+  backdrop-filter: blur(3px);
+}
+
+.daily-edit-modal {
+  width: min(540px, 100%);
+  border: 1px solid var(--daily-border);
+  border-radius: 17px;
+  background: var(--daily-surface);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 16%);
+  overflow: hidden;
+}
+
+.daily-edit-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 0;
+}
+
+.daily-edit-modal__header h2 {
+  margin: 5px 0 0;
+  font-size: 20px;
+}
+
+.daily-edit-modal__close {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--daily-border);
+  border-radius: 9px;
+  background: var(--daily-page);
+  color: var(--daily-muted);
+  cursor: pointer;
+}
+
+.daily-edit-modal__close:hover {
+  border-color: var(--daily-text);
+  color: var(--daily-text);
+}
+
+.daily-edit-modal .metadata-form {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 18px 24px 22px;
+}
+
+.daily-edit-modal .metadata-form > .metadata-form__field,
+.daily-edit-modal .metadata-form > .metadata-form__actions {
+  grid-column: 1 / -1;
+}
+
+/* =========================================================
+   RESPONSIVE BREAKPOINTS
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .daily-intent-screen {
+    padding: 104px 28px 24px;
+  }
+
+  .daily-intent-layout {
+    grid-template-columns: minmax(0, 1.4fr) minmax(285px, 1fr);
+    gap: 18px;
+  }
+}
+
+@media (max-width: 900px) {
+  .daily-intent-screen {
+    height: auto;
+    overflow: visible;
+    padding: 100px 20px 44px;
+  }
+
+  .daily-intent-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .daily-intent-main {
+    grid-row: 1;
+    height: auto;
+  }
+
+  .daily-intent-sidebar {
+    grid-row: 2;
+    height: auto;
+  }
+
+  .daily-intent-card {
+    height: auto;
+    overflow: visible;
+    padding: 18px;
+  }
+
+  .daily-intent-scroll {
+    flex: none;
+    max-height: 54svh;
+    min-height: 180px;
+  }
+}
+
+@media (max-width: 600px) {
+  .daily-intent-composer__controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .daily-intent-composer__meta-inputs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .daily-intent-composer__submit {
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .daily-intent-screen {
+    padding: 94px 14px 40px;
+  }
+
+  .daily-intent-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .daily-intent-header__copy {
+    flex: none;
+    width: 100%;
+  }
+
+  .daily-intent-header__date {
+    text-align: left;
+    padding-bottom: 0;
+  }
+
+  .daily-intent-card {
+    padding: 15px;
+    border-radius: 13px;
+  }
+
+  .daily-intent-item {
+    gap: 10px;
+    padding: 13px;
+  }
+
+  .daily-intent-item__actions {
+    gap: 7px;
+  }
+
+  .daily-intent-edit-btn {
+    padding: 6px 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-intent-screen *,
+  .daily-intent-screen *::before,
+  .daily-intent-screen *::after {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
