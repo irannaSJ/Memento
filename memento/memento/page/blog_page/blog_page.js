@@ -744,16 +744,13 @@ frappe.pages["blog-page"].on_page_load = function (wrapper) {
 
                 </h1>
 
+                 <h2 id="about-project">
+                   
+                </h2>
 
-                <p class="blog-intro">
-
-                    Project is a temporary team effort designed
-                    to achieve a specific goal within a set
-                    timeframe and budget. It follows a structured
-                    lifecycle, from initial planning and execution
-                    to final monitoring and closure.
-
-                </p>
+                <div class="project-about">
+                    ${formatProjectDescription(project.about || "No information available.")}
+                </div>
 
 
                 <!-- AUTHOR -->
@@ -794,9 +791,6 @@ frappe.pages["blog-page"].on_page_load = function (wrapper) {
 
 
                 <h2 id="project-description">
-
-                    Project Description
-
                 </h2>
 
 
@@ -804,15 +798,6 @@ frappe.pages["blog-page"].on_page_load = function (wrapper) {
 
                     ${formatProjectDescription(project.description)}
 
-                </div>
-
-
-                <h2 id="about-project">
-                    About Project
-                </h2>
-
-                <div class="project-about">
-                    ${formatProjectDescription(project.about || "No information available.")}
                 </div>
 
                 <h2 id="doctypes-section">
@@ -870,8 +855,6 @@ frappe.pages["blog-page"].on_page_load = function (wrapper) {
 
 
                 <h2 id="project-details-section">
-
-                    Project Details
 
                 </h2>
 
@@ -1793,7 +1776,6 @@ frappe.pages["blog-page"].on_page_load = function (wrapper) {
                 }
 
             },
-
 
             error: function (error) {
 
