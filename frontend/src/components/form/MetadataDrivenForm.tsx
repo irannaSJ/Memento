@@ -51,10 +51,6 @@ function isInlineTodoField(
   doctype: string,
   fieldname: string,
 ): boolean {
-  // return (
-  //   (doctype === 'Daily ToDo' && fieldname === 'description') ||
-  //   (doctype === 'ToDo Table' && fieldname === 'todo')
-  // )
   return doctype === 'Daily ToDo' && fieldname === 'description'
 }
 
@@ -291,16 +287,12 @@ function buildPayload(
     }
 
     if (field.fieldtype === 'Table MultiSelect') {
-      if (value === undefined || value === null) {
-        payload[field.fieldname] = []
-      } else if (!Array.isArray(value)) {
+      if (!Array.isArray(value)) {
         throw new Error(
           `${field.label} must be an array.`,
         )
-      } else {
-        payload[field.fieldname] = value
       }
-
+      payload[field.fieldname] = value
       continue
     }
 
@@ -331,7 +323,7 @@ function buildPayload(
         payload[field.fieldname] = parsed
       } catch (error: unknown) {
         throw new Error(
-          `Image upload failed : ${getErrorMessage(error)}`,
+          `Invalid ${field.label}: ${getErrorMessage(error)}`,
           { cause: error },
         )
       }
@@ -428,6 +420,9 @@ export function MetadataDrivenForm({
 
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
+    setLoadError(null)
+    setSubmitError(null)
 
     const recordRequest =
       mode === 'update'
@@ -732,11 +727,7 @@ export function MetadataDrivenForm({
           <button
             type="button"
             className="feature-dialog__primary"
-            onClick={() => {
-              setLoading(true)
-              setLoadError(null)
-              setRetryKey((current) => current + 1)
-            }}
+            onClick={() => setRetryKey((current) => current + 1)}
           >
             Retry
           </button>
@@ -804,8 +795,8 @@ export function MetadataDrivenForm({
           )
             ? {
                 ...field,
-                fieldtype: 'Data',
-                label: 'To-do item',
+                fieldtype: 'Small Text',
+                label: 'Intention',
               }
             : doctype === 'ToDo Table' && field.fieldname === 'todo'
               ? {

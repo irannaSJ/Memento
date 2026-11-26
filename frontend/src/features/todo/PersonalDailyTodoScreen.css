@@ -1,3 +1,9 @@
+/* =========================================================
+   MEMENTO — PERSONAL DAILY TO-DO SCREEN
+   Viewport-locked desktop workspace with navbar clearance,
+   hidden-scrollbar checklist feed, and responsive mobile stack.
+   ========================================================= */
+
 .daily-intent-screen {
   --daily-surface: var(--color-surface, #ffffff);
   --daily-page: var(--color-page, #faf9f7);
@@ -9,41 +15,79 @@
   --daily-accent-border: #f2d5cc;
   --daily-progress: #218653;
 
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  max-width: none;
   min-width: 0;
-  padding: 20px 20px 14px;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 106px clamp(20px, 4.5vw, 64px) 28px;
   color: var(--daily-text);
   font-size: 14px;
-}
-
-.daily-intent-screen,
-.daily-intent-screen * {
   box-sizing: border-box;
 }
 
+.daily-intent-screen *,
+.daily-intent-screen *::before,
+.daily-intent-screen *::after {
+  box-sizing: border-box;
+}
+
+.daily-intent-screen button,
+.daily-intent-screen input,
+.daily-intent-screen select,
+.daily-intent-screen textarea {
+  font: inherit;
+}
+
+/* Lock outer viewport on desktop so ONLY the Daily Intentions list scrolls */
+@media (min-width: 901px) {
+  .daily-intent-screen {
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
 .daily-intent-header {
   display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 20px;
+  gap: 12px 24px;
+  margin-bottom: 18px;
+}
+
+.daily-intent-header__copy {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .daily-intent-back {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  margin: 0 0 12px;
+  margin: 0 0 8px;
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--daily-muted);
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 550;
   cursor: pointer;
+  transition:
+    color 160ms ease,
+    transform 160ms ease;
 }
 
 .daily-intent-back:hover {
   color: var(--daily-text);
+  transform: translateX(-3px);
 }
 
 .daily-intent-eyebrow {
@@ -52,20 +96,25 @@
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.14em;
+  line-height: 1.5;
   text-transform: uppercase;
 }
 
 .daily-intent-header h1 {
-  margin: 6px 0 0;
-  font-size: clamp(32px, 2.9vw, 44px);
+  margin: 4px 0 0;
+  font-size: clamp(26px, 2.8vw, 38px);
   line-height: 1.08;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .daily-intent-header__date {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
+  padding-bottom: 2px;
   text-align: right;
 }
 
@@ -81,34 +130,35 @@
   font-weight: 650;
 }
 
-/* 70 / 30 Two-Column Workspace */
+/* =========================================================
+   70 / 30 TWO-COLUMN WORKSPACE
+   ========================================================= */
+
 .daily-intent-layout {
   display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
   grid-template-columns: minmax(0, 7fr) minmax(310px, 3fr);
-  gap: clamp(18px, 1.8vw, 28px);
+  gap: clamp(18px, 2vw, 28px);
   align-items: stretch;
-}
-
-@media (min-width: 901px) {
-  .daily-intent-main,
-  .daily-intent-sidebar {
-    height: calc(100svh - 210px);
-    min-height: 460px;
-    max-height: 800px;
-  }
 }
 
 .daily-intent-main {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
 }
 
 .daily-intent-feed-meta {
   display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 12px;
 }
 
@@ -128,16 +178,22 @@
   font-weight: 700;
 }
 
+/* Scrollable intentions list with completely hidden scrollbar */
 .daily-intent-scroll {
   flex: 1 1 auto;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
-  padding: 2px 4px 10px 1px;
+  overscroll-behavior: contain;
+  padding: 2px 2px 10px;
   scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .daily-intent-scroll::-webkit-scrollbar {
   display: none;
+  width: 0;
+  height: 0;
 }
 
 .daily-intent-items {
@@ -145,6 +201,10 @@
   flex-direction: column;
   gap: 9px;
 }
+
+/* =========================================================
+   INTENTION ITEM CARD
+   ========================================================= */
 
 .daily-intent-item {
   display: grid;
@@ -156,7 +216,9 @@
   border-left: 3px solid var(--daily-accent);
   border-radius: 12px;
   background: var(--daily-surface);
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .daily-intent-item:hover {
@@ -166,6 +228,10 @@
 .daily-intent-item.is-completed {
   border-left-color: var(--daily-progress);
   opacity: 0.85;
+}
+
+.daily-intent-item__content {
+  min-width: 0;
 }
 
 .daily-intent-item__content h3 {
@@ -245,6 +311,7 @@
 .daily-intent-check {
   position: relative;
   display: inline-flex;
+  flex: 0 0 25px;
   width: 25px;
   height: 25px;
   cursor: pointer;
@@ -267,6 +334,10 @@
   background: var(--daily-surface);
   color: transparent;
   font-size: 16px;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
 }
 
 .daily-intent-check input:checked + span {
@@ -287,7 +358,11 @@
   color: var(--daily-muted);
   font-size: 12px;
   font-weight: 650;
+  white-space: nowrap;
   cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease;
 }
 
 .daily-intent-edit-btn:hover {
@@ -301,7 +376,7 @@
   align-items: center;
   justify-content: center;
   min-height: 200px;
-  padding: 24px;
+  padding: 24px 16px;
   text-align: center;
   color: var(--daily-muted);
 }
@@ -329,11 +404,14 @@
   font-size: 13px;
 }
 
-/* Bottom Composer Card */
+/* =========================================================
+   BOTTOM-ANCHORED COMPOSER CARD
+   ========================================================= */
+
 .daily-intent-composer {
   flex: 0 0 auto;
   margin-top: 12px;
-  padding: 15px 17px;
+  padding: 14px 16px;
   border: 1px solid var(--daily-border);
   border-top: 2.5px solid var(--daily-accent);
   border-radius: 14px;
@@ -343,9 +421,10 @@
 
 .daily-intent-composer__top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
   margin-bottom: 10px;
 }
 
@@ -367,9 +446,9 @@
 
 .daily-intent-composer__body textarea {
   width: 100%;
-  min-height: 68px;
-  max-height: 160px;
-  padding: 11px 13px;
+  min-height: 64px;
+  max-height: 150px;
+  padding: 10px 13px;
   border: 1px solid var(--daily-border);
   border-radius: 10px;
   background: var(--daily-page);
@@ -396,13 +475,14 @@
 
 .daily-intent-composer__meta-inputs {
   display: grid;
-  grid-template-columns: repeat(2, minmax(150px, 190px));
+  grid-template-columns: repeat(2, minmax(145px, 190px));
   gap: 10px;
 }
 
 .daily-intent-composer__submit {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   min-height: 42px;
   padding: 9px 18px;
@@ -412,7 +492,16 @@
   color: #ffffff;
   font-size: 12.5px;
   font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.daily-intent-composer__submit:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
 }
 
 .daily-intent-composer__submit:disabled {
@@ -426,24 +515,45 @@
   font-size: 12px;
 }
 
-/* Right Sidebar: Progress & Filters */
-.daily-intent-card {
+/* =========================================================
+   RIGHT SIDEBAR: PROGRESS OVERVIEW & FILTERS CARD
+   ========================================================= */
+
+.daily-intent-sidebar {
+  min-width: 0;
+  min-height: 0;
   height: 100%;
-  padding: 21px 22px;
+}
+
+.daily-intent-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px 20px;
   border: 1px solid var(--daily-border);
   border-radius: 17px;
   background: var(--daily-surface);
   box-shadow: 0 8px 28px rgb(0 0 0 / 3%);
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.daily-intent-card::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .daily-intent-card > h2 {
-  margin: 6px 0 14px;
+  margin: 6px 0 13px;
   font-size: 20px;
 }
 
 .daily-intent-card > h3 {
-  margin: 6px 0 14px;
+  margin: 6px 0 13px;
   font-size: 18px;
 }
 
@@ -490,7 +600,7 @@
 
 .daily-sidebar-divider {
   height: 1px;
-  margin: 18px 0;
+  margin: 16px 0;
   background: var(--daily-border);
 }
 
@@ -519,7 +629,7 @@
 }
 
 .daily-filter-group {
-  margin-top: 16px;
+  margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid var(--daily-border);
 }
@@ -567,7 +677,10 @@
   line-height: 1.5;
 }
 
-/* Modify Dialog */
+/* =========================================================
+   MODIFY DAILY TO-DO DIALOG
+   ========================================================= */
+
 .daily-edit-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -614,6 +727,11 @@
   cursor: pointer;
 }
 
+.daily-edit-modal__close:hover {
+  border-color: var(--daily-text);
+  color: var(--daily-text);
+}
+
 .daily-edit-modal .metadata-form {
   grid-template-columns: minmax(0, 1fr);
   padding: 18px 24px 22px;
@@ -624,19 +742,117 @@
   grid-column: 1 / -1;
 }
 
-@media (max-width: 900px) {
+/* =========================================================
+   RESPONSIVE BREAKPOINTS
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .daily-intent-screen {
+    padding: 104px 28px 24px;
+  }
+
   .daily-intent-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .daily-intent-sidebar {
-    grid-row: 1;
-  }
-
-  .daily-intent-main {
-    grid-row: 2;
+    grid-template-columns: minmax(0, 1.4fr) minmax(285px, 1fr);
+    gap: 18px;
   }
 }
 
+@media (max-width: 900px) {
+  .daily-intent-screen {
+    height: auto;
+    overflow: visible;
+    padding: 100px 20px 44px;
+  }
 
+  .daily-intent-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
 
+  .daily-intent-main {
+    grid-row: 1;
+    height: auto;
+  }
+
+  .daily-intent-sidebar {
+    grid-row: 2;
+    height: auto;
+  }
+
+  .daily-intent-card {
+    height: auto;
+    overflow: visible;
+    padding: 18px;
+  }
+
+  .daily-intent-scroll {
+    flex: none;
+    max-height: 54svh;
+    min-height: 180px;
+  }
+}
+
+@media (max-width: 600px) {
+  .daily-intent-composer__controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .daily-intent-composer__meta-inputs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .daily-intent-composer__submit {
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .daily-intent-screen {
+    padding: 94px 14px 40px;
+  }
+
+  .daily-intent-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .daily-intent-header__copy {
+    flex: none;
+    width: 100%;
+  }
+
+  .daily-intent-header__date {
+    text-align: left;
+    padding-bottom: 0;
+  }
+
+  .daily-intent-card {
+    padding: 15px;
+    border-radius: 13px;
+  }
+
+  .daily-intent-item {
+    gap: 10px;
+    padding: 13px;
+  }
+
+  .daily-intent-item__actions {
+    gap: 7px;
+  }
+
+  .daily-intent-edit-btn {
+    padding: 6px 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-intent-screen *,
+  .daily-intent-screen *::before,
+  .daily-intent-screen *::after {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,4 +1,3 @@
-
 .link-field {
   position: relative;
   width: 100%;
@@ -15,15 +14,17 @@
 .link-field__control input {
   width: 100%;
   min-width: 0;
-  min-height: 44px;
-  padding: 10px 40px 10px 38px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0 38px 0 14px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
   outline: none;
-  background: var(--color-surface);
+  background: var(--color-page);
   color: var(--color-text);
   font: inherit;
-  font-size: 0.925rem;
+  font-size: 13px;
+  line-height: 1.4;
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease,
@@ -32,13 +33,13 @@
 
 .link-field__control input::placeholder {
   color: var(--color-muted);
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .link-field__control input:focus {
   border-color: var(--color-focus);
   box-shadow: 0 0 0 3px
-    color-mix(in srgb, var(--color-focus) 16%, transparent);
+    color-mix(in srgb, var(--color-focus) 14%, transparent);
 }
 
 .link-field__control input:disabled {
@@ -47,7 +48,6 @@
   background: var(--color-hover);
 }
 
-.link-field__search-icon,
 .link-field__chevron,
 .link-field__clear,
 .link-field__spinner {
@@ -55,23 +55,18 @@
   z-index: 1;
 }
 
-.link-field__search-icon {
-  left: 12px;
-  color: var(--color-muted);
-  pointer-events: none;
-}
-
 .link-field__chevron {
   right: 12px;
   color: var(--color-muted);
+  font-size: 16px;
   pointer-events: none;
 }
 
 .link-field__clear {
   right: 8px;
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   place-items: center;
   padding: 0;
   border: 0;
@@ -88,8 +83,8 @@
 
 .link-field__spinner {
   right: 12px;
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   border: 2px solid var(--color-border);
   border-top-color: var(--color-focus);
   border-radius: 50%;
@@ -104,11 +99,11 @@
 
 .link-field__dropdown {
   position: absolute;
-  z-index: 1000;
+  z-index: 6000;
   top: calc(100% + 6px);
   right: 0;
   left: 0;
-  max-height: 260px;
+  max-height: min(240px, 35vh);
   overflow-x: hidden;
   overflow-y: auto;
   padding: 5px;
@@ -118,6 +113,11 @@
   box-shadow: 0 14px 36px rgb(0 0 0 / 14%);
 }
 
+.link-field__dropdown--upwards {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
 .link-field__option {
   position: relative;
   display: flex;
@@ -125,7 +125,7 @@
   gap: 12px;
   width: 100%;
   min-width: 0;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -143,7 +143,7 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  font-size: 0.9rem;
+  font-size: 13px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -153,7 +153,7 @@
   max-width: 40%;
   overflow: hidden;
   color: var(--color-muted);
-  font-size: 0.78rem;
+  font-size: 11.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -164,9 +164,9 @@
 }
 
 .link-field__message {
-  padding: 14px 12px;
+  padding: 12px;
   color: var(--color-muted);
-  font-size: 0.85rem;
+  font-size: 12.5px;
   text-align: center;
   overflow-wrap: anywhere;
 }
@@ -193,7 +193,7 @@
 .link-field__hint,
 .link-field__error {
   margin: 6px 0 0;
-  font-size: 0.8rem;
+  font-size: 11.5px;
   line-height: 1.4;
 }
 
@@ -213,20 +213,4 @@
   .link-field__spinner {
     animation-duration: 1.5s;
   }
-}
-
-
-/* ==========================================
-   LinkField dropdown - open upwards
-========================================== */
-
-.metadata-form [role="listbox"] {
-  position: absolute !important;
-  top: auto !important;
-  bottom: calc(100% + 7px) !important;
-
-  z-index: 6000;
-
-  max-height: min(240px, 35vh);
-  overflow-y: auto;
 }

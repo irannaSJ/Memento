@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import {
@@ -14,15 +15,15 @@ import { RecordCard } from '../../components/list/RecordCard'
 import { RecordUpdateDialog } from '../../components/form/RecordUpdateDialog'
 import { MetadataDrivenForm } from '../../components/form/MetadataDrivenForm'
 
-
 import {
   AppDatePicker,
   AppSelect,
   AppCombobox,
 } from '../../components/controls'
 
-
 import './RecordPage.css'
+
+gsap.registerPlugin(ScrollTrigger)
 
 const PAGE_LENGTH = 20
 
@@ -68,8 +69,6 @@ function getSelectOptions(options: unknown): string[] {
     .filter(Boolean)
 }
 
-
-
 interface RecordPageProps {
   feature: FeatureDefinition
   onBack: () => void
@@ -86,7 +85,6 @@ function getErrorMessage(error: unknown): string {
 export function RecordPage({ feature, onBack }: RecordPageProps) {
   const doctype = feature.doctype
   const navigate = useNavigate()
-
   const location = useLocation()
 
   const queryParams = useMemo(
@@ -108,10 +106,13 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
     return result
   }, [feature.id, queryParams])
 
+  const activeFilterCount = Object.keys(activeFilters).length
+
   const [linkFilterOptions, setLinkFilterOptions] =
     useState<Record<string, FilterOption[]>>({})
 
   const pageRef = useRef<HTMLElement>(null)
+  const listContainerRef = useRef<HTMLDivElement>(null)
 
   const isCardFeature = feature.id === 'projects' || feature.id === 'tasks'
 
@@ -130,9 +131,6 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
   const [metadataRefreshKey, setMetadataRefreshKey] = useState(0)
   const [recordsRefreshKey, setRecordsRefreshKey] = useState(0)
 
-  // Loading and errors are tied to the current request rather than reset
-  // synchronously inside the records-loading effect. This also handles
-  // feature, filter, search, pagination, and refresh changes consistently.
   const recordsRequestKey = useMemo(
     () => JSON.stringify({
       doctype,
@@ -156,15 +154,8 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
       ? recordsErrorState.message
       : null
 
-  // Stores which feature has completed its top-section entrance animation.
-  // This also handles navigation between Projects and Tasks when this component
-  // instance is reused by the router.
-  const [introFeatureId, setIntroFeatureId] = useState<string | null>(null)
-
-  // Animate the top section of Projects and Tasks on entry.
+  // Animate top header and compact control bar on feature entry
   useEffect(() => {
-    if (!isCardFeature) return
-
     const root = pageRef.current
     if (!root) return
 
@@ -172,56 +163,68 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
       '(prefers-reduced-motion: reduce)',
     ).matches
 
-    // Keep content visible and skip animation for reduced-motion preferences.
     if (reduceMotion) return
 
     const context = gsap.context(() => {
       const timeline = gsap.timeline({
-        defaults: { ease: 'power2.out' },
-        onComplete: () => setIntroFeatureId(feature.id),
+        defaults: { ease: 'power3.out' },
       })
 
       timeline
         .fromTo(
           '.record-page__back',
-          { autoAlpha: 0, y: 8 },
-          { autoAlpha: 1, y: 0, duration: 0.2 },
+          { autoAlpha: 0, x: -10 },
+          {
+            autoAlpha: 1,
+            x: 0,
+            duration: 0.34,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0,
         )
         .fromTo(
-          '.record-page__heading > *',
+          '.record-page__heading-copy > *',
+          { autoAlpha: 0, y: 12 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.4,
+            stagger: 0.05,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0.05,
+        )
+        .fromTo(
+          '.record-page__heading-actions > *',
           { autoAlpha: 0, y: 10 },
           {
             autoAlpha: 1,
             y: 0,
-            duration: 0.25,
-            stagger: 0.04,
+            duration: 0.36,
+            stagger: 0.05,
+            clearProps: 'opacity,visibility,transform',
           },
-          '-=0.08',
+          0.12,
         )
         .fromTo(
-          '.record-page__toolbar',
-          { autoAlpha: 0, y: 8 },
-          { autoAlpha: 1, y: 0, duration: 0.23 },
-          '-=0.08',
-        )
-        .fromTo(
-          '.record-page__summary',
-          { autoAlpha: 0, y: 6 },
-          { autoAlpha: 1, y: 0, duration: 0.2 },
-          '-=0.06',
+          '.record-page__controls-bar',
+          { autoAlpha: 0, y: 12 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.42,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0.16,
         )
     }, root)
 
     return () => context.revert()
-  }, [feature.id, isCardFeature])
+  }, [feature.id])
 
-
-  
-
-  // Reveal records only after the top section has finished and the current
-  // request has completed. This prevents the cards from appearing too early.
+  // Stagger-reveal cards or table container via ScrollTrigger when records load
   useEffect(() => {
-    if (!isCardFeature || recordsLoading || !metadata) return
+    if (recordsLoading || !metadata) return
 
     const root = pageRef.current
     if (!root) return
@@ -232,41 +235,48 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
 
     if (reduceMotion) return
 
-    // If the intro has not completed for this feature, wait for its timeline.
-    if (introFeatureId !== feature.id) return
-
     const context = gsap.context(() => {
-      const cards = gsap.utils.toArray<HTMLElement>('.record-card')
-      if (cards.length === 0) return
+      if (isCardFeature) {
+        const cards = gsap.utils.toArray<HTMLElement>('.record-card')
+        if (cards.length === 0) return
 
-      gsap.fromTo(
-        cards,
-        {
-          autoAlpha: 0,
-          y: 16,
-          scale: 0.99,
-        },
-        {
-          autoAlpha: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.3,
-          stagger: 0.045,
-          ease: 'power2.out',
-          clearProps: 'opacity,visibility,transform',
-        },
-      )
+        gsap.fromTo(
+          cards,
+          {
+            autoAlpha: 0,
+            y: 18,
+          },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.38,
+            stagger: 0.055,
+            ease: 'power2.out',
+            clearProps: 'opacity,visibility,transform',
+            scrollTrigger: {
+              trigger: '.record-card-grid',
+              start: 'top 90%',
+              once: true,
+            },
+          },
+        )
+      } else if (listContainerRef.current) {
+        gsap.fromTo(
+          listContainerRef.current,
+          { autoAlpha: 0, y: 14 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.38,
+            ease: 'power2.out',
+            clearProps: 'opacity,visibility,transform',
+          },
+        )
+      }
     }, root)
 
     return () => context.revert()
-  }, [
-    records,
-    recordsLoading,
-    metadata,
-    isCardFeature,
-    introFeatureId,
-    feature.id,
-  ])
+  }, [records, recordsLoading, metadata, isCardFeature, feature.id])
 
   // Load the visible list columns and field metadata.
   useEffect(() => {
@@ -299,7 +309,8 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
     let cancelled = false
     const requestKey = recordsRequestKey
 
-    void mementoApi.getDocTypeRecords({
+    void mementoApi
+      .getDocTypeRecords({
         doctype,
         start,
         page_length: PAGE_LENGTH,
@@ -331,8 +342,6 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
       cancelled = true
     }
   }, [doctype, start, activeSearch, activeFilters, recordsRefreshKey, recordsRequestKey])
-
-
 
   useEffect(() => {
     let cancelled = false
@@ -388,8 +397,6 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
     }
   }, [feature.id])
 
-
-
   function updateFilter(fieldname: string, value: string) {
     const params = new URLSearchParams(location.search)
 
@@ -399,7 +406,6 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
       params.delete(fieldname)
     }
 
-    // Keep the selected project's/task's readable label in the URL.
     const contextLabelKey =
       feature.id === 'tasks' && fieldname === 'project'
         ? 'project_label'
@@ -451,15 +457,10 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
     )
   }
 
-
-
-
-
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const nextSearch = searchInput.trim()
-
 
     if (nextSearch === activeSearch && start === 0) {
       setRecordsRefreshKey((value) => value + 1)
@@ -479,7 +480,17 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
     setActiveSearch('')
   }
 
-  // const pageNumber = Math.floor(start / PAGE_LENGTH) + 1
+  const visibleFilterFields = useMemo(
+    () =>
+      FILTER_FIELDS_BY_FEATURE[feature.id]
+        .map((fieldname) =>
+          metadata?.fields.find(
+            (field) => field.fieldname === fieldname,
+          ),
+        )
+        .filter((field) => field && !field.hidden),
+    [feature.id, metadata],
+  )
 
   // Reuse the metadata-driven form for create flows across RecordPage features.
   if (isCreateOpen) {
@@ -519,8 +530,6 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
               setActiveSearch('')
               setRecordsRefreshKey((value) => value + 1)
 
-              // Clear filters so the newly created record is not hidden by the
-              // previous filtered view.
               navigate(
                 { pathname: location.pathname, search: '' },
                 { replace: true },
@@ -548,17 +557,72 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
           Back to overview
         </button>
 
-        <div className="record-page__heading">
-          <span className="record-page__eyebrow">MEMENTO / WORKSPACE</span>
+        <div className="record-page__heading-row">
+          <div className="record-page__heading-copy">
+            <span className="record-page__eyebrow">MEMENTO / WORKSPACE</span>
 
-          <h1 id="record-page-title">
-            {metadata?.label ?? feature.itemPlural}
-          </h1>
+            <h1 id="record-page-title">
+              {metadata?.label ?? feature.itemPlural}
+            </h1>
 
-          <p>{feature.description}</p>
+            <p>{feature.description}</p>
+          </div>
+
+          <div className="record-page__heading-actions">
+            {feature.id === 'activity' && Boolean(activeFilters.task_id) && (
+              <button
+                type="button"
+                className="record-page__secondary-button record-page__todo-button"
+                onClick={() => {
+                  const params = new URLSearchParams()
+                  const taskId = String(activeFilters.task_id)
+                  const taskLabel = queryParams.get('task_label') || taskId
+                  const projectId = queryParams.get('project_id') || ''
+                  const projectLabel = queryParams.get('project_label') || ''
+
+                  params.set('task_id', taskId)
+                  params.set('task_label', taskLabel)
+                  if (projectId) params.set('project_id', projectId)
+                  if (projectLabel) params.set('project_label', projectLabel)
+
+                  navigate(`/daily-todo?${params.toString()}`)
+                }}
+                aria-label="Open To-Do items for this task"
+              >
+                <i className="ri-list-check-2" aria-hidden="true" />
+                Task To-Do
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="record-page__secondary-button"
+              disabled={recordsLoading}
+              onClick={() => {
+                setRecordsRefreshKey((value) => value + 1)
+              }}
+              aria-label="Refresh records"
+            >
+              <i className="ri-refresh-line" aria-hidden="true" />
+              Refresh
+            </button>
+
+            {metadata?.capabilities.can_create && (
+              <button
+                type="button"
+                className="record-page__create-button"
+                onClick={() => setIsCreateOpen(true)}
+                aria-label={`Create a new ${CREATE_LABEL_BY_FEATURE[feature.id].toLowerCase()}`}
+              >
+                <i className="ri-add-line" aria-hidden="true" />
+                Create New {CREATE_LABEL_BY_FEATURE[feature.id]}
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="record-page__toolbar">
+        {/* Compact unified Search + Filters bar */}
+        <div className="record-page__controls-bar">
           <form
             className="record-page__search"
             onSubmit={handleSearch}
@@ -574,213 +638,161 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
               onChange={(event) => setSearchInput(event.target.value)}
             />
 
-            <button type="submit">Search</button>
+            {activeSearch && (
+              <button
+                type="button"
+                className="record-page__search-clear"
+                onClick={clearSearch}
+                aria-label="Clear search"
+                title="Clear search"
+              >
+                <i className="ri-close-line" aria-hidden="true" />
+              </button>
+            )}
+
+            <button type="submit" className="record-page__search-submit">
+              Search
+            </button>
           </form>
 
-          {activeSearch && (
-            <button
-              type="button"
-              className="record-page__secondary-button"
-              onClick={clearSearch}
-            >
-              Clear search
-            </button>
-          )}
+          {visibleFilterFields.length > 0 && (
+            <div className="record-page__filters">
+              <span className="record-page__filters-badge" aria-hidden="true">
+                <i className="ri-equalizer-2-line" />
+                <span>Filters</span>
+              </span>
 
-          <button
-            type="button"
-            className="record-page__secondary-button"
-            disabled={recordsLoading}
-            onClick={() => {
-              setRecordsRefreshKey((value) => value + 1)
-            }}
-          >
-            <i className="ri-refresh-line" aria-hidden="true" />
-            Refresh
-          </button>
+              {visibleFilterFields.map((field) => {
+                if (!field) return null
 
-          {feature.id === 'activity' && Boolean(activeFilters.task_id) && (
-            <button
-              type="button"
-              className="record-page__secondary-button record-page__todo-button"
-              onClick={() => {
-                const params = new URLSearchParams()
-                const taskId = String(activeFilters.task_id)
-                const taskLabel = queryParams.get('task_label') || taskId
-                const projectId = queryParams.get('project_id') || ''
-                const projectLabel = queryParams.get('project_label') || ''
+                const fieldname = field.fieldname
+                const value = String(activeFilters[fieldname] ?? '')
 
-                params.set('task_id', taskId)
-                params.set('task_label', taskLabel)
-                if (projectId) params.set('project_id', projectId)
-                if (projectLabel) params.set('project_label', projectLabel)
-
-                navigate(`/daily-todo?${params.toString()}`)
-              }}
-              aria-label="Open To-Do items for this task"
-            >
-              <i className="ri-list-check-2" aria-hidden="true" />
-              Task To-Do
-            </button>
-          )}
-
-          {metadata?.capabilities.can_create && (
-            <button
-              type="button"
-              className="record-page__secondary-button record-page__create-button"
-              onClick={() => setIsCreateOpen(true)}
-              aria-label={`Create a new ${CREATE_LABEL_BY_FEATURE[feature.id].toLowerCase()}`}
-            >
-              <i className="ri-add-line" aria-hidden="true" />
-              Create New {CREATE_LABEL_BY_FEATURE[feature.id]}
-            </button>
-          )}
-        </div>
-
-
-
-        
-        <div className="record-page__filters">
-          <div className="record-page__filters-heading">
-            <i className="ri-equalizer-2-line" aria-hidden="true" />
-            <span>Filter records</span>
-          </div>
-
-          {FILTER_FIELDS_BY_FEATURE[feature.id]
-            .map((fieldname) =>
-              metadata?.fields.find(
-                (field) => field.fieldname === fieldname,
-              ),
-            )
-            .filter((field) => field && !field.hidden)
-            .map((field) => {
-              if (!field) return null
-
-              const fieldname = field.fieldname
-              const value = String(activeFilters[fieldname] ?? '')
-
-              const selectOptions = getSelectOptions(
-                'options' in field ? field.options : undefined,
-              )
-
-              const linkOptions = linkFilterOptions[fieldname] ?? []
-
-              const selectedLabel =
-                fieldname === 'project'
-                  ? queryParams.get('project_label')
-                  : fieldname === 'task_id'
-                    ? queryParams.get('task_label')
-                    : null
-
-              const choices =
-                value && !linkOptions.some(
-                  (option) => option.value === value,
+                const selectOptions = getSelectOptions(
+                  'options' in field ? field.options : undefined,
                 )
-                  ? [
-                      {
-                        value,
-                        label: selectedLabel || value,
-                      },
-                      ...linkOptions,
-                    ]
-                  : linkOptions
 
-              return (
-                <div
-                  className="record-page__filter-field"
-                  key={fieldname}
-                >
-                  {field.fieldtype === 'Select' ? (
-                    <AppSelect
-                      id={`filter-${fieldname}`}
-                      label={field.label}
-                      value={value}
-                      onChange={(nextValue) =>
-                        updateFilter(fieldname, nextValue)
-                      }
-                      placeholder={`All ${field.label}`}
-                      options={[
-                        {
-                          value: '',
-                          label: `All ${field.label}`,
-                        },
-                        ...selectOptions.map((option) => ({
-                          value: option,
-                          label: option,
-                        })),
-                      ]}
-                    />
-                  ) : field.fieldtype === 'Date' ? (
-                    <AppDatePicker
-                      id={`filter-${fieldname}`}
-                      label={field.label}
-                      value={value}
-                      onChange={(nextValue) =>
-                        updateFilter(fieldname, nextValue)
-                      }
-                      placeholder={`Select ${field.label}`}
-                      clearable
-                    />
-                  ) : field.fieldtype === 'Link' ? (
-                    <AppCombobox
-                      id={`filter-${fieldname}`}
-                      label={field.label}
-                      value={value}
-                      onChange={(nextValue) =>
-                        updateFilter(fieldname, nextValue)
-                      }
-                      placeholder={`All ${field.label}`}
-                      options={[
-                        {
-                          value: '',
-                          label: `All ${field.label}`,
-                        },
-                        ...choices,
-                      ]}
-                      clearable={true}
-                      emptyText={`No ${field.label} found.`}
-                    />
-                  ) : (
-                    <>
-                      <label htmlFor={`filter-${fieldname}`}>
-                        {field.label}
-                      </label>
+                const linkOptions = linkFilterOptions[fieldname] ?? []
 
-                      <input
+                const selectedLabel =
+                  fieldname === 'project'
+                    ? queryParams.get('project_label')
+                    : fieldname === 'task_id'
+                      ? queryParams.get('task_label')
+                      : null
+
+                const choices =
+                  value && !linkOptions.some(
+                    (option) => option.value === value,
+                  )
+                    ? [
+                        {
+                          value,
+                          label: selectedLabel || value,
+                        },
+                        ...linkOptions,
+                      ]
+                    : linkOptions
+
+                return (
+                  <div
+                    className="record-page__filter-field"
+                    key={fieldname}
+                  >
+                    {field.fieldtype === 'Select' ? (
+                      <AppSelect
                         id={`filter-${fieldname}`}
-                        type="text"
+                        label={field.label}
                         value={value}
-                        aria-label={`Filter by ${field.label}`}
-                        placeholder={`Enter ${field.label}`}
-                        onChange={(event) =>
-                          updateFilter(fieldname, event.target.value)
+                        onChange={(nextValue) =>
+                          updateFilter(fieldname, nextValue)
                         }
+                        placeholder={`All ${field.label}`}
+                        options={[
+                          {
+                            value: '',
+                            label: `All ${field.label}`,
+                          },
+                          ...selectOptions.map((option) => ({
+                            value: option,
+                            label: option,
+                          })),
+                        ]}
                       />
-                    </>
-                  )}
-                </div>
-              )
-            })}
+                    ) : field.fieldtype === 'Date' ? (
+                      <AppDatePicker
+                        id={`filter-${fieldname}`}
+                        label={field.label}
+                        value={value}
+                        onChange={(nextValue) =>
+                          updateFilter(fieldname, nextValue)
+                        }
+                        placeholder={field.label}
+                        clearable
+                      />
+                    ) : field.fieldtype === 'Link' ? (
+                      <AppCombobox
+                        id={`filter-${fieldname}`}
+                        label={field.label}
+                        value={value}
+                        onChange={(nextValue) =>
+                          updateFilter(fieldname, nextValue)
+                        }
+                        placeholder={`All ${field.label}`}
+                        options={[
+                          {
+                            value: '',
+                            label: `All ${field.label}`,
+                          },
+                          ...choices,
+                        ]}
+                        clearable={true}
+                        emptyText={`No ${field.label} found.`}
+                      />
+                    ) : (
+                      <>
+                        <label
+                          className="sr-only"
+                          htmlFor={`filter-${fieldname}`}
+                        >
+                          {field.label}
+                        </label>
 
-          {Object.keys(activeFilters).length > 0 && (
-            <button
-              type="button"
-              className="record-page__clear-filters"
-              onClick={clearFilters}
-            >
-              <i className="ri-close-line" aria-hidden="true" />
-              Clear filters
-            </button>
+                        <input
+                          id={`filter-${fieldname}`}
+                          type="text"
+                          value={value}
+                          aria-label={`Filter by ${field.label}`}
+                          placeholder={field.label}
+                          onChange={(event) =>
+                            updateFilter(fieldname, event.target.value)
+                          }
+                        />
+                      </>
+                    )}
+                  </div>
+                )
+              })}
+
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  className="record-page__clear-filters"
+                  onClick={clearFilters}
+                >
+                  <i className="ri-close-line" aria-hidden="true" />
+                  Clear ({activeFilterCount})
+                </button>
+              )}
+            </div>
           )}
         </div>
-
-
       </div>
 
       {actionMessage && (
         <div className="record-page__notice" role="status">
           <i className="ri-checkbox-circle-line" aria-hidden="true" />
-          {actionMessage}
+          <span>{actionMessage}</span>
         </div>
       )}
 
@@ -822,88 +834,90 @@ export function RecordPage({ feature, onBack }: RecordPageProps) {
         </div>
       )}
 
-      {metadataLoading && !metadata ? (
-        <div className="record-page__loading" role="status">
-          Loading list configuration…
-        </div>
-      ) : metadata && isCardFeature ? (
-        <div className="record-card-grid">
-          {records.map((record) => (
-            <RecordCard
-              key={record.name}
-              feature={feature}
-              record={record}
-              relatedProjectName={
-                feature.id === 'tasks'
-                  ? linkFilterOptions.project?.find(
-                      (option) => option.value === String(record.project ?? ''),
-                    )?.label
-                  : undefined
-              }
-              canUpdate={metadata.capabilities.can_update}
-              updating={editingRecordName !== null}
-              isUpdating={editingRecordName === record.name}
-              onReadMore={() => {
-                navigate(`/${feature.id}/${encodeURIComponent(record.name)}`)
-              }}
-              onUpdate={() => setEditingRecordName(record.name)}
-              onCardClick={() => {
-                if (feature.id === 'projects') {
-                  const projectLabel = String(
-                    record.project_name ?? record.name,
-                  )
-
-                  navigate(
-                    `/tasks?project=${encodeURIComponent(record.name)}&project_label=${encodeURIComponent(projectLabel)}`,
-                  )
-
-                  return
+      <div ref={listContainerRef} className="record-page__content">
+        {metadataLoading && !metadata ? (
+          <div className="record-page__loading" role="status">
+            Loading list configuration…
+          </div>
+        ) : metadata && isCardFeature ? (
+          <div className="record-card-grid">
+            {records.map((record) => (
+              <RecordCard
+                key={record.name}
+                feature={feature}
+                record={record}
+                relatedProjectName={
+                  feature.id === 'tasks'
+                    ? linkFilterOptions.project?.find(
+                        (option) => option.value === String(record.project ?? ''),
+                      )?.label
+                    : undefined
                 }
+                canUpdate={metadata.capabilities.can_update}
+                updating={editingRecordName !== null}
+                isUpdating={editingRecordName === record.name}
+                onReadMore={() => {
+                  navigate(`/${feature.id}/${encodeURIComponent(record.name)}`)
+                }}
+                onUpdate={() => setEditingRecordName(record.name)}
+                onCardClick={() => {
+                  if (feature.id === 'projects') {
+                    const projectLabel = String(
+                      record.project_name ?? record.name,
+                    )
 
-                if (feature.id === 'tasks') {
-                  const taskLabel = String(
-                    record.task_name ?? record.name,
-                  )
-                  const projectId = String(record.project ?? '')
-                  const projectLabel =
-                    linkFilterOptions.project?.find(
-                      (option) => option.value === projectId,
-                    )?.label ?? ''
-                  const params = new URLSearchParams({
-                    task_id: record.name,
-                    task_label: taskLabel,
-                  })
+                    navigate(
+                      `/tasks?project=${encodeURIComponent(record.name)}&project_label=${encodeURIComponent(projectLabel)}`,
+                    )
 
-                  if (projectId) params.set('project_id', projectId)
-                  if (projectLabel) params.set('project_label', projectLabel)
+                    return
+                  }
 
-                  navigate(`/activity?${params.toString()}`)
-                }
-              }}
-            />
-          ))}
+                  if (feature.id === 'tasks') {
+                    const taskLabel = String(
+                      record.task_name ?? record.name,
+                    )
+                    const projectId = String(record.project ?? '')
+                    const projectLabel =
+                      linkFilterOptions.project?.find(
+                        (option) => option.value === projectId,
+                      )?.label ?? ''
+                    const params = new URLSearchParams({
+                      task_id: record.name,
+                      task_label: taskLabel,
+                    })
 
-          {recordsLoading && records.length === 0 && (
-            <div className="record-page__loading" role="status">
-              Loading {feature.itemPlural}…
-            </div>
-          )}
+                    if (projectId) params.set('project_id', projectId)
+                    if (projectLabel) params.set('project_label', projectLabel)
 
-          {!recordsLoading && records.length === 0 && !recordsError && (
-            <div className="record-page__loading">
-              {activeSearch
-                ? 'No matching records found.'
-                : `No ${feature.itemPlural} found.`}
-            </div>
-          )}
-        </div>
-      ) : metadata ? (
-        <RecordTable
-          fields={metadata.fields}
-          records={records}
-          loading={recordsLoading}
-        />
-      ) : null}
+                    navigate(`/activity?${params.toString()}`)
+                  }
+                }}
+              />
+            ))}
+
+            {recordsLoading && records.length === 0 && (
+              <div className="record-page__loading" role="status">
+                Loading {feature.itemPlural}…
+              </div>
+            )}
+
+            {!recordsLoading && records.length === 0 && !recordsError && (
+              <div className="record-page__loading">
+                {activeSearch || activeFilterCount > 0
+                  ? 'No matching records found.'
+                  : `No ${feature.itemPlural} found.`}
+              </div>
+            )}
+          </div>
+        ) : metadata ? (
+          <RecordTable
+            fields={metadata.fields}
+            records={records}
+            loading={recordsLoading}
+          />
+        ) : null}
+      </div>
 
       <div className="record-page__pagination">
         <span>

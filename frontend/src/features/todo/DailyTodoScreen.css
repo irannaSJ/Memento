@@ -1,3 +1,9 @@
+/* =========================================================
+   MEMENTO — TASK TO-DO SCREEN
+   Viewport-locked desktop workspace with navbar clearance,
+   hidden-scrollbar checklist feed, and responsive mobile stack.
+   ========================================================= */
+
 .task-todo-screen {
   --todo-surface: var(--color-surface, #ffffff);
   --todo-page: var(--color-page, #faf9f7);
@@ -6,26 +12,22 @@
   --todo-border: var(--color-border, #e5e2df);
   --todo-accent: var(--color-focus, #4b46a8);
 
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  min-width: none;
-  min-height: 100vh;
-  margin-inline : auto;
-  padding: 40px 64px;
-  color: var(--todo-text);
-  font-size: 14px;
-
-  /* width :100%;
   max-width: none;
   min-width: 0;
-  min-height: 100vh;
-  margin-inline: auto;
-  padding: 40px 64px; */
-
-  
+  min-height: 100dvh;
+  margin: 0;
+  padding: 106px clamp(20px, 4.5vw, 64px) 28px;
+  color: var(--todo-text);
+  font-size: 14px;
+  box-sizing: border-box;
 }
 
-.task-todo-screen,
-.task-todo-screen * {
+.task-todo-screen *,
+.task-todo-screen *::before,
+.task-todo-screen *::after {
   box-sizing: border-box;
 }
 
@@ -40,32 +42,52 @@
   cursor: pointer;
 }
 
+/* Lock outer viewport on desktop so ONLY the To-Do checklist scrolls */
+@media (min-width: 901px) {
+  .task-todo-screen {
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
 .task-todo-header {
   display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 22px;
+  gap: 12px 24px;
+  margin-bottom: 18px;
 }
 
 .task-todo-header__copy {
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .task-todo-back {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 15px;
+  gap: 7px;
+  margin: 0 0 8px;
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--todo-muted);
-  font-size: 13px !important;
+  font-size: 12.5px;
+  font-weight: 550;
+  transition:
+    color 160ms ease,
+    transform 160ms ease;
 }
 
 .task-todo-back:hover {
   color: var(--todo-text);
+  transform: translateX(-3px);
 }
 
 .task-todo-eyebrow {
@@ -73,32 +95,26 @@
   color: var(--todo-muted);
   font-size: 10px;
   font-weight: 750;
-  letter-spacing: .14em;
+  letter-spacing: 0.14em;
   line-height: 1.5;
   text-transform: uppercase;
 }
 
 .task-todo-header h1 {
-  margin: 8px 0 7px;
-  font-size: clamp(34px, 3vw, 46px);
+  margin: 4px 0 0;
+  font-size: clamp(26px, 2.8vw, 38px);
   line-height: 1.08;
-  letter-spacing: -.05em;
-}
-
-.task-todo-header__copy > p {
-  max-width: 680px;
-  margin: 0;
-  color: var(--todo-muted);
-  font-size: 14px;
-  line-height: 1.65;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .task-todo-header__date {
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
-  gap: 5px;
-  padding-bottom: 3px;
+  gap: 3px;
+  padding-bottom: 2px;
   text-align: right;
 }
 
@@ -106,7 +122,7 @@
   color: var(--todo-muted);
   font-size: 10px;
   font-weight: 750;
-  letter-spacing: .12em;
+  letter-spacing: 0.12em;
 }
 
 .task-todo-header__date strong {
@@ -114,71 +130,82 @@
   font-weight: 650;
 }
 
-/* Main 70/30 workspace grid. */
+/* =========================================================
+   70 / 30 TWO-COLUMN WORKSPACE
+   ========================================================= */
+
 .task-todo-layout {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(310px, 3fr);
-  align-items: start;
-  gap: clamp(18px, 1.8vw, 28px);
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
+  grid-template-columns: minmax(0, 7fr) minmax(310px, 3fr);
+  gap: clamp(18px, 2vw, 28px);
+  align-items: stretch;
 }
 
 .task-todo-main {
   display: flex;
-  min-width: 0;
   flex-direction: column;
-}
-
-.task-todo-list-card,
-.task-todo-context-card {
   min-width: 0;
-  border: 1px solid var(--todo-border);
-  border-radius: 17px;
-  background: var(--todo-surface);
-  box-shadow: 0 8px 28px rgb(0 0 0 / 3%);
+  min-height: 0;
+  height: 100%;
 }
 
-/* Checklist and composer share this single outer card. */
+/* Borderless left checklist workspace */
 .task-todo-list-card {
   display: flex;
-  height: clamp(600px, calc(100vh - 260px), 780px);
-  min-height: 600px;
   flex-direction: column;
-  padding: 21px 22px 18px;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   overflow: hidden;
 }
 
 .task-todo-section-heading {
   display: flex;
-  align-items: flex-end;
+  flex: 0 0 auto;
+  align-items: baseline;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 .task-todo-section-heading h2 {
-  margin: 7px 0 0;
-  font-size: 21px;
+  margin: 0;
+  font-size: 19px;
   line-height: 1.25;
-  letter-spacing: -.025em;
+  letter-spacing: -0.02em;
 }
 
 .task-todo-section-heading p {
-  margin: 5px 0 0;
+  margin: 3px 0 0;
   color: var(--todo-muted);
   font-size: 12px;
   line-height: 1.5;
 }
 
-/* The item list scrolls independently so completed items remain reachable. */
+/* Scrollable To-Do list with completely hidden scrollbar */
 .task-todo-items-scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 1px 6px 6px 1px;
-  scrollbar-gutter: stable;
+  padding: 2px 2px 10px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.task-todo-items-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .task-todo-items {
@@ -187,64 +214,27 @@
   gap: 9px;
 }
 
+/* =========================================================
+   TO-DO ITEM CARD
+   ========================================================= */
+
 .task-todo-item {
   display: grid;
-  grid-template-columns: 25px minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 13px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
   padding: 15px 16px;
   border: 1px solid var(--todo-border);
   border-radius: 12px;
   background: var(--todo-surface);
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .task-todo-item:hover {
   border-color: color-mix(in srgb, var(--todo-border), var(--todo-text) 14%);
   box-shadow: 0 5px 15px rgb(0 0 0 / 3%);
-}
-
-.task-todo-item__check {
-  position: relative;
-  display: inline-flex;
-  width: 25px;
-  height: 25px;
-  margin-top: 1px;
-  cursor: pointer;
-}
-
-.task-todo-item__check input {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  width: 25px;
-  height: 25px;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.task-todo-item__check > span {
-  display: grid;
-  width: 25px;
-  height: 25px;
-  place-items: center;
-  border: 1.5px solid var(--todo-border);
-  border-radius: 7px;
-  background: var(--todo-surface);
-  color: transparent;
-  font-size: 16px;
-}
-
-.task-todo-item__check input:focus-visible + span {
-  outline: 2px solid var(--todo-accent);
-  outline-offset: 3px;
-}
-
-.task-todo-item__check input:checked + span {
-  border-color: var(--todo-text);
-  background: var(--todo-text);
-  color: var(--todo-surface);
 }
 
 .task-todo-item__content {
@@ -260,8 +250,9 @@
 }
 
 .task-todo-item.is-completed .task-todo-item__content h3 {
-  color: var(--todo-muted);
+  color: #858585;
   text-decoration: line-through;
+  text-decoration-thickness: 1px;
 }
 
 .task-todo-item__meta {
@@ -286,16 +277,6 @@
   overflow-wrap: anywhere;
 }
 
-.task-todo-chip--priority {
-  color: var(--todo-text);
-  font-weight: 650;
-}
-
-.task-todo-chip--priority.is-low { background: #f2f7f1; border-color: #e1ecdf; color: #4e724b; }
-.task-todo-chip--priority.is-medium { background: #f8f5e9; border-color: #eee5c9; color: #8a6a24; }
-.task-todo-chip--priority.is-high { background: #fff0e8; border-color: #f7ddce; color: #aa552d; }
-.task-todo-chip--priority.is-urgent { background: #fff0f1; border-color: #f4d7db; color: #b23f50; }
-
 .task-todo-item__timestamps {
   display: flex;
   flex-wrap: wrap;
@@ -306,6 +287,10 @@
   line-height: 1.5;
 }
 
+.task-todo-item.is-completed .task-todo-item__timestamps {
+  color: #999999;
+}
+
 .task-todo-item__timestamps span {
   display: inline-flex;
   align-items: center;
@@ -314,6 +299,63 @@
 
 .task-todo-item__completed-at {
   color: #4e8061;
+}
+
+.task-todo-item__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 11px;
+}
+
+.task-todo-item__check {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 25px;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.task-todo-item__check input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 25px;
+  height: 25px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.task-todo-item__check > span {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border: 1.5px solid var(--todo-border);
+  border-radius: 7px;
+  background: var(--todo-surface);
+  color: transparent;
+  font-size: 16px;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.task-todo-item__check input:focus-visible + span {
+  outline: 2px solid var(--todo-accent);
+  outline-offset: 3px;
+}
+
+.task-todo-item__check input:checked + span {
+  border-color: #218653;
+  background: #e8f5ed;
+  color: #218653;
 }
 
 .task-todo-item__edit {
@@ -327,9 +369,12 @@
   border-radius: 8px;
   background: var(--todo-surface);
   color: var(--todo-muted);
-  font-size: 12px !important;
-  font-weight: 650 !important;
+  font-size: 12px;
+  font-weight: 650;
   white-space: nowrap;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease;
 }
 
 .task-todo-item__edit:hover {
@@ -343,7 +388,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 24px 16px;
   color: var(--todo-muted);
   text-align: center;
 }
@@ -371,20 +416,19 @@
   line-height: 1.55;
 }
 
-/* Add/edit form is integrated into the checklist card. */
+/* =========================================================
+   BOTTOM-ANCHORED ADD TO-DO COMPOSER
+   ========================================================= */
+
 .task-todo-composer {
   flex: 0 0 auto;
   min-width: 0;
-  margin-top: 15px;
-  padding: 15px 16px;
+  margin-top: 12px;
+  padding: 14px 16px;
   border: 1.5px solid var(--todo-border);
   border-radius: 14px;
   background: var(--todo-surface);
   box-shadow: 0 4px 18px rgb(0 0 0 / 2.5%);
-}
-
-.task-todo-composer.is-editing {
-  border-color: var(--todo-accent);
 }
 
 .task-todo-composer__heading {
@@ -396,147 +440,116 @@
 }
 
 .task-todo-composer__heading h2 {
-  margin: 2px 0 0;
-  font-size: 18px;
+  margin: 0;
+  font-size: 17px;
   line-height: 1.25;
 }
 
-.task-todo-composer__cancel-link {
-  border: 0;
-  background: transparent;
-  color: var(--todo-muted);
-  font-size: 12px !important;
-  font-weight: 650 !important;
-}
-
-.task-todo-composer__form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 220px) auto;
-  align-items: end;
-  gap: 12px;
-  min-width: 0;
-}
-
-.task-todo-field {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 7px;
-  color: var(--todo-text);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.task-todo-field > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.task-todo-field > span i {
-  color: var(--todo-muted);
-  font-size: 14px;
-}
-
-.task-todo-field b {
-  color: #d65b65;
-}
-
-.task-todo-field input,
-.task-todo-field select {
-  width: 100%;
-  min-width: 0;
-  height: 45px;
-  padding: 0 12px;
-  border: 1px solid var(--todo-border);
-  border-radius: 9px;
-  outline: none;
-  background: var(--todo-page);
-  color: var(--todo-text);
-  font-size: 13px;
-  font-weight: 450;
-}
-
-/* Subtle grey focus state for selected fields */
-.task-todo-field input:focus,
-.task-todo-field select:focus {
-  border-color: #9ca3af;
-  outline: 2px solid rgb(156 163 175 / 20%);
-  outline-offset: 1px;
-  box-shadow: none;
-}
-
-/* Consistent focus for keyboard navigation */
-.task-todo-field input:focus-visible,
-.task-todo-field select:focus-visible {
-  border-color: #9ca3af;
-  outline: 2px solid #b0b0b0;
-  outline-offset: 2px;
-}
-
-.task-todo-field small {
-  color: var(--todo-muted);
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1.4;
-}
-
-.task-todo-composer__actions {
-  display: flex;
-  align-items: end;
-  justify-content: flex-end;
-}
-
-.task-todo-composer__submit {
-  display: inline-flex;
-  min-height: 45px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: 1px solid var(--todo-text);
-  border-radius: 9px;
-  background: var(--todo-text);
-  color: var(--todo-surface);
-  font-size: 12px !important;
-  font-weight: 700 !important;
-  white-space: nowrap;
-  transition: opacity 150ms ease, transform 150ms ease;
-}
-
-.task-todo-composer__submit:hover:not(:disabled) {
-  transform: translateY(-1px);
-  opacity: .88;
-}
-
-.task-todo-composer__submit:disabled {
-  cursor: not-allowed;
-  opacity: .45;
-}
-
 .task-todo-composer__note {
-  grid-column: 1 / -1;
   margin: 8px 0 0;
   color: var(--todo-muted);
-  font-size: 11px;
+  font-size: 11.5px;
   line-height: 1.45;
 }
 
-/* One combined context + filter card on the right. */
+/* Inline MetadataDrivenForm inside Composer */
+.task-todo-composer .metadata-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 0;
+}
+
+.task-todo-composer .metadata-form > .metadata-form__field {
+  grid-column: 1 / 2;
+  margin: 0;
+}
+
+.task-todo-composer .metadata-form__field > label > span:first-child {
+  display: none;
+}
+
+.task-todo-composer .metadata-form__field textarea {
+  width: 100%;
+  min-height: 76px;
+  max-height: 160px;
+  padding: 11px 14px;
+  border: 1px solid var(--todo-border);
+  border-radius: 11px;
+  background: var(--todo-page);
+  color: var(--todo-text);
+  font-size: 13.5px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.task-todo-composer .metadata-form__field textarea:focus {
+  border-color: #9ca3af;
+  outline: 2px solid rgb(156 163 175 / 20%);
+  outline-offset: 1px;
+}
+
+.task-todo-composer .metadata-form > .metadata-form__actions {
+  grid-column: 2 / 3;
+  align-self: end;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.task-todo-composer .metadata-form__actions button.feature-dialog__primary,
+.task-todo-composer .metadata-form__actions button.feature-dialog__secondary {
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.task-todo-composer .metadata-form > .metadata-form__error,
+.task-todo-composer .metadata-form > .metadata-form__empty,
+.task-todo-composer .metadata-form > .metadata-form__loading {
+  grid-column: 1 / -1;
+}
+
+/* =========================================================
+   RIGHT SIDEBAR: TASK CONTEXT & FILTERS CARD
+   ========================================================= */
+
 .task-todo-sidebar {
-  position: sticky;
-  top: 112px;
   min-width: 0;
-  align-self: start;
+  min-height: 0;
+  height: 100%;
 }
 
 .task-todo-context-card {
-  padding: 21px 22px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px 20px;
+  border: 1px solid var(--todo-border);
+  border-radius: 17px;
+  background: var(--todo-surface);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 3%);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.task-todo-context-card::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .task-todo-context-card > h2 {
-  margin: 7px 0 14px;
-  font-size: 21px;
+  margin: 6px 0 12px;
+  font-size: 20px;
   line-height: 1.25;
 }
 
@@ -544,19 +557,19 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 6px;
-  padding: 13px 0;
+  gap: 5px;
+  padding: 11px 0;
   border-top: 1px solid var(--todo-border);
 }
 
 .task-todo-context-item > span {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   color: var(--todo-muted);
   font-size: 10px;
   font-weight: 750;
-  letter-spacing: .1em;
+  letter-spacing: 0.1em;
 }
 
 .task-todo-context-item > span i {
@@ -565,38 +578,31 @@
 
 .task-todo-context-item > strong {
   color: var(--todo-text);
-  font-size: 15px;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-
-.task-todo-context-item > small {
-  color: var(--todo-muted);
-  font-size: 11px;
+  font-size: 14.5px;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
 .task-todo-sidebar-divider {
   height: 1px;
-  margin: 8px 0 17px;
+  margin: 6px 0 15px;
   background: var(--todo-border);
 }
 
 .task-todo-filter-section h3 {
-  margin: 6px 0 15px;
-  font-size: 19px;
+  margin: 5px 0 13px;
+  font-size: 18px;
   line-height: 1.25;
 }
 
-.task-todo-filter-section .task-todo-field {
+.task-todo-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--todo-text);
   font-size: 12px;
-}
-
-.task-todo-filter-section .task-todo-field input,
-.task-todo-filter-section .task-todo-field select {
-  height: 43px;
-  background: var(--todo-surface);
-  font-size: 13px;
+  font-weight: 700;
 }
 
 .task-todo-filter-actions {
@@ -612,8 +618,8 @@
   border-radius: 8px;
   background: var(--todo-page);
   color: var(--todo-muted);
-  font-size: 11px !important;
-  font-weight: 650 !important;
+  font-size: 11px;
+  font-weight: 650;
 }
 
 .task-todo-filter-actions button[aria-pressed='true'] {
@@ -625,8 +631,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
-  margin-top: 16px;
-  padding-top: 15px;
+  margin-top: 14px;
+  padding-top: 14px;
   border-top: 1px solid var(--todo-border);
 }
 
@@ -636,19 +642,19 @@
   color: var(--todo-muted);
   font-size: 10px;
   font-weight: 750;
-  letter-spacing: .1em;
+  letter-spacing: 0.1em;
 }
 
 .task-todo-sidebar-status .task-todo-status-filter {
   flex: 1 1 auto;
-  min-height: 36px;
-  padding: 7px 9px;
+  min-height: 35px;
+  padding: 6px 9px;
   border: 1px solid var(--todo-border);
   border-radius: 8px;
   background: var(--todo-page);
   color: var(--todo-muted);
-  font-size: 11px !important;
-  font-weight: 650 !important;
+  font-size: 11px;
+  font-weight: 650;
   white-space: nowrap;
 }
 
@@ -659,15 +665,15 @@
 }
 
 .task-todo-field--task-filter {
-  margin-top: 16px;
+  margin-top: 14px;
 }
 
 .task-todo-sidebar-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 18px;
-  padding-top: 16px;
+  margin-top: 16px;
+  padding-top: 14px;
   border-top: 1px solid var(--todo-border);
 }
 
@@ -675,18 +681,18 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .task-todo-sidebar-stats span {
   color: var(--todo-muted);
   font-size: 9px;
   font-weight: 750;
-  letter-spacing: .07em;
+  letter-spacing: 0.07em;
 }
 
 .task-todo-sidebar-stats strong {
-  font-size: 23px;
+  font-size: 22px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -694,7 +700,7 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin: 12px 2px 0;
+  margin: 14px 2px 0;
   color: var(--todo-muted);
   font-size: 11px;
   line-height: 1.5;
@@ -705,395 +711,9 @@
   outline-offset: 3px;
 }
 
-@media (max-width: 1100px) {
-  .task-todo-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(285px, .42fr);
-  }
-
-  .task-todo-list-card {
-    height: clamp(620px, calc(100vh - 245px), 780px);
-  }
-
-  .task-todo-composer__form {
-    grid-template-columns: minmax(0, 1fr) minmax(130px, .55fr);
-  }
-
-  .task-todo-composer__actions {
-    grid-column: 1 / -1;
-    justify-content: flex-end;
-  }
-}
-
-@media (max-width: 900px) {
-  .task-todo-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .task-todo-sidebar {
-    position: static;
-    grid-row: 1;
-  }
-
-  .task-todo-main {
-    grid-row: 2;
-  }
-
-  .task-todo-list-card {
-    height: auto;
-    min-height: 0;
-  }
-
-  .task-todo-items-scroll {
-    flex: none;
-    max-height: 56vh;
-    min-height: 220px;
-  }
-}
-
-@media (max-width: 760px) {
-  .task-todo-screen {
-    padding: 20px 16px 30px;
-  }
-
-  .task-todo-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .task-todo-header__date {
-    text-align: left;
-  }
-
-  .task-todo-context-card,
-  .task-todo-list-card {
-    padding: 17px;
-  }
-
-  .task-todo-item {
-    grid-template-columns: 25px minmax(0, 1fr) auto;
-    gap: 10px;
-    padding: 13px;
-  }
-
-  .task-todo-section-heading h2 {
-    font-size: 19px;
-  }
-}
-
-@media (max-width: 560px) {
-  .task-todo-screen {
-    padding-inline: 12px;
-  }
-
-  .task-todo-list-card,
-  .task-todo-context-card {
-    padding: 14px;
-    border-radius: 13px;
-  }
-
-  .task-todo-item {
-    grid-template-columns: 25px minmax(0, 1fr);
-    gap: 9px;
-    padding: 12px;
-  }
-
-  .task-todo-item__edit {
-    grid-column: 2;
-    justify-self: start;
-  }
-
-  .task-todo-composer__form {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .task-todo-composer__actions {
-    grid-column: auto;
-    justify-content: stretch;
-  }
-
-  .task-todo-composer__submit {
-    width: 100%;
-  }
-
-  .task-todo-sidebar-status .task-todo-status-filter {
-    flex-basis: 100%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .task-todo-screen *,
-  .task-todo-screen *::before,
-  .task-todo-screen *::after {
-    transition: none !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* ==========================================
-   LEFT: Borderless checklist workspace
-========================================== */
-
-.task-todo-list-card {
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  padding: 0;
-  overflow: hidden;
-}
-
-/* ==========================================
-   RIGHT: Retain Task Details card
-========================================== */
-
-.task-todo-context-card {
-  border: 1px solid var(--todo-border);
-  border-radius: 17px;
-  background: var(--todo-surface);
-  box-shadow: 0 8px 28px rgb(0 0 0 / 3%);
-  padding: 21px 22px;
-  box-sizing: border-box;
-}
-
-/* ==========================================
-   To-Do item layout
-========================================== */
-
-.task-todo-item {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-}
-
-.task-todo-item__content {
-  min-width: 0;
-}
-
-.task-todo-item__actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 11px;
-}
-
-/* Move completion checkbox to right */
-.task-todo-item__check {
-  display: inline-flex;
-  flex: 0 0 25px;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-}
-
-/* Green completed checkbox */
-.task-todo-item__check input:checked + span {
-  border-color: #218653;
-  background: #e8f5ed;
-  color: #218653;
-}
-
-/* Grey text for completed items */
-.task-todo-item.is-completed .task-todo-item__content h3 {
-  color: #858585;
-  text-decoration: line-through;
-  text-decoration-thickness: 1px;
-}
-
-.task-todo-item.is-completed .task-todo-item__timestamps {
-  color: #999;
-}
-
-/* ==========================================
-   FINAL VIEWPORT HEIGHT AND ALIGNMENT FIX
-========================================== */
-
-@media (min-width: 901px) {
-  .task-todo-layout {
-    align-items: stretch;
-  }
-
-  .task-todo-main,
-  .task-todo-sidebar {
-    height: calc(100svh - 210px);
-    min-height: 450px;
-    max-height: 800px;
-  }
-
-  .task-todo-list-card,
-  .task-todo-context-card {
-    height: 100%;
-    min-height: 0;
-    box-sizing: border-box;
-  }
-
-  .task-todo-list-card {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .task-todo-items-scroll {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-  }
-
-  .task-todo-sidebar {
-    position: static;
-    min-width: 0;
-  }
-
-  .task-todo-context-card {
-    overflow-y: auto;
-  }
-}
-
-/* Tablet and mobile: natural content height */
-@media (max-width: 900px) {
-  .task-todo-main,
-  .task-todo-sidebar {
-    height: auto;
-    min-height: 0;
-  }
-
-  .task-todo-list-card,
-  .task-todo-context-card {
-    height: auto;
-  }
-
-  .task-todo-list-card {
-    min-height: 0;
-  }
-
-  .task-todo-context-card {
-    padding: 17px;
-  }
-
-  .task-todo-item {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-}
-
-@media (max-width: 560px) {
-  .task-todo-item__actions {
-    gap: 7px;
-  }
-
-  .task-todo-item__edit {
-    padding: 7px 9px;
-  }
-}
-
-/* Hide scrollbar but preserve scrolling */
-.task-todo-items-scroll {
-  overflow-y: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  scrollbar-gutter: auto;
-}
-
-.task-todo-items-scroll::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
-
-/* ==========================================
-   Inline MetadataDrivenForm inside Composer
-========================================== */
-
-.task-todo-composer .metadata-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 10px;
-  padding: 0;
-}
-
-/* Textarea spans the full available width of the card */
-.task-todo-composer .metadata-form > .metadata-form__field {
-  grid-column: 1 / 2;
-  margin: 0;
-}
-
-/* Hide redundant field label inside the compact composer card */
-.task-todo-composer .metadata-form__field > label > span:first-child {
-  display: none;
-}
-
-.task-todo-composer .metadata-form__field textarea {
-  width: 100%;
-  min-height: 86px;
-  max-height: 180px;
-  padding: 12px 14px;
-  border: 1px solid var(--todo-border);
-  border-radius: 12px;
-  background: var(--todo-page);
-  color: var(--todo-text);
-  font-size: 13.5px;
-  line-height: 1.55;
-  resize: vertical;
-}
-
-.task-todo-composer .metadata-form__field textarea:focus {
-  border-color: #9ca3af;
-  outline: 2px solid rgb(156 163 175 / 20%);
-  outline-offset: 1px;
-}
-
-/* Submit button aligned to bottom-right beside the textarea */
-.task-todo-composer .metadata-form > .metadata-form__actions {
-  grid-column: 2 / 3;
-  align-self: end;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-}
-
-.task-todo-composer .metadata-form__actions button.feature-dialog__primary,
-.task-todo-composer .metadata-form__actions button.feature-dialog__secondary {
-  min-height: 38px;
-  padding: 8px 16px;
-  border-radius: 10px;
-  font-size: 12.5px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/* Errors and loading states still span full width */
-.task-todo-composer .metadata-form > .metadata-form__error,
-.task-todo-composer .metadata-form > .metadata-form__empty,
-.task-todo-composer .metadata-form > .metadata-form__loading {
-  grid-column: 1 / -1;
-}
-
-@media (max-width: 600px) {
-  .task-todo-composer .metadata-form {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .task-todo-composer .metadata-form > .metadata-form__field,
-  .task-todo-composer .metadata-form > .metadata-form__actions {
-    grid-column: 1 / -1;
-  }
-
-  .task-todo-composer .metadata-form > .metadata-form__actions {
-    flex-direction: row;
-    justify-content: flex-end;
-  }
-}
-
-
-
-
-
-
-
-
-/* Dialog Box */
-/* ==========================================
-   Modify To-Do Modal Dialog
-========================================== */
+/* =========================================================
+   MODIFY TO-DO MODAL DIALOG
+   ========================================================= */
 
 .todo-edit-modal-backdrop {
   position: fixed;
@@ -1128,7 +748,7 @@
   margin: 5px 0 0;
   font-size: 20px;
   line-height: 1.25;
-  letter-spacing: -.02em;
+  letter-spacing: -0.02em;
 }
 
 .todo-edit-modal__close {
@@ -1160,4 +780,128 @@
 
 .todo-edit-modal .metadata-form__field textarea {
   min-height: 110px;
+}
+
+/* =========================================================
+   RESPONSIVE BREAKPOINTS
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .task-todo-screen {
+    padding: 104px 28px 24px;
+  }
+
+  .task-todo-layout {
+    grid-template-columns: minmax(0, 1.4fr) minmax(285px, 1fr);
+    gap: 18px;
+  }
+}
+
+@media (max-width: 900px) {
+  .task-todo-screen {
+    height: auto;
+    overflow: visible;
+    padding: 100px 20px 44px;
+  }
+
+  .task-todo-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .task-todo-main {
+    grid-row: 1;
+    height: auto;
+  }
+
+  .task-todo-sidebar {
+    grid-row: 2;
+    height: auto;
+  }
+
+  .task-todo-list-card,
+  .task-todo-context-card {
+    height: auto;
+    overflow: visible;
+  }
+
+  .task-todo-context-card {
+    padding: 18px;
+  }
+
+  .task-todo-items-scroll {
+    flex: none;
+    max-height: 54svh;
+    min-height: 180px;
+  }
+}
+
+@media (max-width: 600px) {
+  .task-todo-composer .metadata-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .task-todo-composer .metadata-form > .metadata-form__field,
+  .task-todo-composer .metadata-form > .metadata-form__actions {
+    grid-column: 1 / -1;
+  }
+
+  .task-todo-composer .metadata-form > .metadata-form__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 560px) {
+  .task-todo-screen {
+    padding: 94px 14px 40px;
+  }
+
+  .task-todo-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .task-todo-header__copy {
+    flex: none;
+    width: 100%;
+  }
+
+  .task-todo-header__date {
+    text-align: left;
+    padding-bottom: 0;
+  }
+
+  .task-todo-context-card {
+    padding: 15px;
+    border-radius: 13px;
+  }
+
+  .task-todo-item {
+    gap: 10px;
+    padding: 13px;
+  }
+
+  .task-todo-item__actions {
+    gap: 7px;
+  }
+
+  .task-todo-item__edit {
+    padding: 7px 9px;
+  }
+
+  .task-todo-sidebar-status .task-todo-status-filter {
+    flex-basis: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-todo-screen *,
+  .task-todo-screen *::before,
+  .task-todo-screen *::after {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }

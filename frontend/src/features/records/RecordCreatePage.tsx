@@ -1,3 +1,6 @@
+import { useEffect, useRef } from 'react'
+import gsap from 'gsap'
+
 import { MetadataDrivenForm } from '../../components/form/MetadataDrivenForm'
 import type { FeatureDefinition } from '../home/featureData'
 import './RecordCreatePage.css'
@@ -13,6 +16,8 @@ export function RecordCreatePage({
   onCancel,
   onCreated,
 }: RecordCreatePageProps) {
+  const rootRef = useRef<HTMLElement>(null)
+
   const isProject = feature.id === 'projects'
 
   const recordLabel = isProject
@@ -23,8 +28,88 @@ export function RecordCreatePage({
         ? 'to-do item'
         : 'activity entry'
 
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+
+    if (reduceMotion) return
+
+    const context = gsap.context(() => {
+      const timeline = gsap.timeline({
+        defaults: { ease: 'power3.out' },
+      })
+
+      timeline
+        .fromTo(
+          '.record-create-page__back',
+          { autoAlpha: 0, x: -10 },
+          {
+            autoAlpha: 1,
+            x: 0,
+            duration: 0.34,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0,
+        )
+        .fromTo(
+          '.record-create-page__eyebrow',
+          { autoAlpha: 0, y: 10 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.36,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0.05,
+        )
+        .fromTo(
+          '.record-create-page__icon',
+          { autoAlpha: 0, scale: 0.88, rotate: -6 },
+          {
+            autoAlpha: 1,
+            scale: 1,
+            rotate: 0,
+            duration: 0.45,
+            ease: 'back.out(1.4)',
+            clearProps: 'opacity,visibility,transform',
+          },
+          0.08,
+        )
+        .fromTo(
+          '.record-create-page__title-copy > *',
+          { autoAlpha: 0, y: 12 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.42,
+            stagger: 0.05,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0.12,
+        )
+        .fromTo(
+          '.record-create-page__form-card',
+          { autoAlpha: 0, y: 18 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.48,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0.18,
+        )
+    }, root)
+
+    return () => context.revert()
+  }, [feature.id])
+
   return (
     <main
+      ref={rootRef}
       className="record-create-page"
       aria-labelledby="record-create-title"
     >
@@ -44,11 +129,11 @@ export function RecordCreatePage({
           </span>
 
           <div className="record-create-page__title-row">
-            <div className="record-create-page__icon">
-              <i className={feature.icon} aria-hidden="true" />
+            <div className="record-create-page__icon" aria-hidden="true">
+              <i className={feature.icon} />
             </div>
 
-            <div>
+            <div className="record-create-page__title-copy">
               <h1 id="record-create-title">
                 Create {recordLabel}
               </h1>
@@ -76,12 +161,10 @@ export function RecordCreatePage({
                   ? 'Project information'
                   : `${recordLabel.charAt(0).toUpperCase()}${recordLabel.slice(1)} information`}
               </h2>
-
-            
             </div>
 
-            <span className="record-create-page__form-icon">
-              <i className="ri-file-list-3-line" aria-hidden="true" />
+            <span className="record-create-page__form-icon" aria-hidden="true">
+              <i className="ri-file-list-3-line" />
             </span>
           </div>
 
@@ -94,12 +177,6 @@ export function RecordCreatePage({
             />
           </div>
         </section>
-
-        {/* <p className="record-create-page__footnote">
-          <i className="ri-shield-check-line" aria-hidden="true" />
-          Your record will be saved using Memento's existing
-          backend API and permission checks.
-        </p> */}
       </div>
     </main>
   )

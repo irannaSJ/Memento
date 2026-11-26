@@ -1,5 +1,5 @@
-
 import {
+  useCallback,
   useEffect,
   useId,
   useRef,
@@ -55,154 +55,80 @@ export function LinkField({
   const listboxId = `${inputId}-options`
   const errorId = `${inputId}-error`
 
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Prevent the value-sync effect from clearing text as the user types
-  // while replacing an existing selection.
-  // const userEditingRef = useRef(false)
   const [isUserEditing, setIsUserEditing] = useState(false)
+  const [hasTypedSinceFocus, setHasTypedSinceFocus] = useState(false)
 
   const [inputValue, setInputValue] = useState(value)
-  const [searchTerm, setSearchTerm] = useState(value)
+  const [searchTerm, setSearchTerm] = useState('')
   const [options, setOptions] = useState<LinkOption[]>([])
   const [selectedOption, setSelectedOption] =
     useState<LinkOption | null>(null)
 
   const [isOpen, setIsOpen] = useState(false)
+  const [openUpwards, setOpenUpwards] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [retryCount, setRetryCount] = useState(0)
 
   const selectedValue = selectedOption?.value
-  const displyedInputValue =isUserEditing
-  ? inputValue
-  : selectedValue === value
-    ? selectedOption?.label ?? ''
-    : value
+  const displayedInputValue = isUserEditing
+    ? inputValue
+    : !value
+      ? ''
+      : selectedValue === value
+        ? selectedOption?.label ?? value
+        : value
 
   const waitingForReference =
     isDynamicLink && !referenceDoctype?.trim()
 
-  // Synchronize external form values, including values loaded in update mode.
-  // useEffect(() => {
-  //   if (!value) {
-  //     setSelectedOption(null)
+  const updateDropdownPlacement = useCallback(() => {
+    const el = wrapperRef.current
+    if (!el) return
 
-  //     if (userEditingRef.current) {
-  //       userEditingRef.current = false
-  //       return
-  //     }
+    const rect = el.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
 
-  //     setInputValue('')
-  //     setSearchTerm('')
-  //     return
-  //   }
-
-  //   if (selectedOption?.value === value) {
-  //     setInputValue(selectedOption.label)
-  //     setSearchTerm(selectedOption.label)
-  //     return
-  //   }
-
-  //   setSelectedOption(null)
-  //   setInputValue(value)
-  //   setSearchTerm(value)
-  // }, [
-  //   value,
-  //   selectedOption,
-  // ])
-
-  // Load options on demand. Existing saved values are also looked up so
-  // the input can display their labels instead of raw record IDs.
-  // useEffect(() => {
-  //   if (waitingForReference) {
-  //     setOptions([])
-  //     setLoading(false)
-  //     setError(null)
-  //     return
-  //   }
-
-  //   if (!isOpen && !value) {
-  //     return
-  //   }
-
-  //   let cancelled = false
-
-  //   const timer = window.setTimeout(() => {
-  //     setLoading(true)
-  //     setError(null)
-
-  //     void mementoApi
-  //       .searchLinkOptions({
-  //         source_doctype: sourceDoctype,
-  //         fieldname,
-  //         operation,
-  //         search: searchTerm.trim(),
-  //         reference_doctype: referenceDoctype,
-  //         page_length: 20,
-  //       })
-  //       .then((response) => {
-  //         if (cancelled) return
-
-  //         const results = response.data ?? []
-  //         setOptions(results)
-  //         setActiveIndex(0)
-
-  //         const matchingValue = value
-  //           ? results.find((option) => option.value === value)
-  //           : undefined
-
-  //         if (matchingValue) {
-  //           setSelectedOption(matchingValue)
-  //           setInputValue(matchingValue.label)
-  //         }
-  //       })
-  //       .catch((requestError: unknown) => {
-  //         if (cancelled) return
-
-  //         setOptions([])
-  //         setError(getErrorMessage(requestError))
-  //       })
-  //       .finally(() => {
-  //         if (!cancelled) {
-  //           setLoading(false)
-  //         }
-  //       })
-  //   }, 250)
-
-  //   return () => {
-  //     cancelled = true
-  //     window.clearTimeout(timer)
-  //   }
-  // }, [
-  //   sourceDoctype,
-  //   fieldname,
-  //   operation,
-  //   referenceDoctype,
-  //   waitingForReference,
-  //   searchTerm,
-  //   isOpen,
-  //   value,
-  // ])
-
+    setOpenUpwards(spaceBelow < 240 && spaceAbove > spaceBelow)
+  }, [])
 
   useEffect(() => {
-  // The dropdown is disabled until a Dynamic Link has a target DocType.
-  // Avoid synchronous state updates in this effect.
+    if (!isOpen) return
+
+    updateDropdownPlacement()
+    window.addEventListener('resize', updateDropdownPlacement)
+    window.addEventListener('scroll', updateDropdownPlacement, true)
+
+    return () => {
+      window.removeEventListener('resize', updateDropdownPlacement)
+      window.removeEventListener('scroll', updateDropdownPlacement, true)
+    }
+  }, [isOpen, updateDropdownPlacement])
+
+  useEffect(() => {
     if (waitingForReference) {
       return
     }
 
-    if (!isOpen && !value) {
+    const needsLabelResolution =
+      Boolean(value) && !isUserEditing && selectedValue !== value
+
+    if (!isOpen && !needsLabelResolution) {
       return
     }
 
     let cancelled = false
 
-    const requestedSearch =
-      !isUserEditing && value && selectedValue !== value
-        ? value
-        : searchTerm
+    const requestedSearch = needsLabelResolution
+      ? value
+      : hasTypedSinceFocus
+        ? searchTerm.trim()
+        : ''
 
     const timer = window.setTimeout(() => {
       setLoading(true)
@@ -213,7 +139,7 @@ export function LinkField({
           source_doctype: sourceDoctype,
           fieldname,
           operation,
-          search: requestedSearch.trim(),
+          search: requestedSearch,
           reference_doctype: referenceDoctype,
           page_length: 20,
         })
@@ -230,7 +156,9 @@ export function LinkField({
 
           if (matchingValue) {
             setSelectedOption(matchingValue)
-            setInputValue(matchingValue.label)
+            if (!isUserEditing) {
+              setInputValue(matchingValue.label)
+            }
           }
         })
         .catch((requestError: unknown) => {
@@ -244,7 +172,7 @@ export function LinkField({
             setLoading(false)
           }
         })
-    }, 250)
+    }, needsLabelResolution ? 0 : 220)
 
     return () => {
       cancelled = true
@@ -260,7 +188,9 @@ export function LinkField({
     isOpen,
     value,
     selectedValue,
-    isUserEditing
+    isUserEditing,
+    hasTypedSinceFocus,
+    retryCount,
   ])
 
   function handleInputChange(
@@ -269,7 +199,7 @@ export function LinkField({
     const nextValue = event.target.value
 
     setIsUserEditing(true)
-
+    setHasTypedSinceFocus(true)
     setInputValue(nextValue)
     setSearchTerm(nextValue)
     setSelectedOption(null)
@@ -282,21 +212,20 @@ export function LinkField({
   }
 
   function selectOption(option: LinkOption) {
-    setIsUserEditing(true)
-
+    setIsUserEditing(false)
+    setHasTypedSinceFocus(false)
     setSelectedOption(option)
     setInputValue(option.label)
-    setSearchTerm(option.label)
+    setSearchTerm('')
     setIsOpen(false)
     setError(null)
 
-    // Submit the real linked record name, not its display label.
     onChange(option.value)
   }
 
   function clearSelection() {
-    setIsUserEditing(true)
-
+    setIsUserEditing(false)
+    setHasTypedSinceFocus(false)
     setSelectedOption(null)
     setInputValue('')
     setSearchTerm('')
@@ -345,19 +274,16 @@ export function LinkField({
 
     if (event.key === 'Escape') {
       setIsOpen(false)
+      setIsUserEditing(false)
+      setHasTypedSinceFocus(false)
     }
   }
 
   const inputDisabled = disabled || waitingForReference
 
   return (
-    <div className="link-field">
+    <div ref={wrapperRef} className="link-field">
       <div className="link-field__control">
-        {/* <i
-          className="ri-search-line link-field__search-icon"
-          aria-hidden="true"
-        /> */}
-
         <input
           ref={inputRef}
           id={inputId}
@@ -371,7 +297,7 @@ export function LinkField({
           aria-required={required}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? errorId : undefined}
-          value={displyedInputValue}
+          value={displayedInputValue}
           disabled={inputDisabled}
           placeholder={
             waitingForReference
@@ -379,9 +305,16 @@ export function LinkField({
               : placeholder
           }
           onChange={handleInputChange}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            setHasTypedSinceFocus(false)
+            setIsOpen(true)
+          }}
           onBlur={() => {
-            window.setTimeout(() => setIsOpen(false), 120)
+            window.setTimeout(() => {
+              setIsOpen(false)
+              setIsUserEditing(false)
+              setHasTypedSinceFocus(false)
+            }, 140)
           }}
           onKeyDown={handleKeyDown}
         />
@@ -417,7 +350,9 @@ export function LinkField({
 
       {isOpen && !inputDisabled && (
         <div
-          className="link-field__dropdown"
+          className={`link-field__dropdown${
+            openUpwards ? ' link-field__dropdown--upwards' : ''
+          }`}
           id={listboxId}
           role="listbox"
           aria-label="Matching records"
@@ -438,7 +373,7 @@ export function LinkField({
                 onClick={() => {
                   setError(null)
                   setIsOpen(true)
-                  setSearchTerm((current) => `${current} `)
+                  setRetryCount((count) => count + 1)
                 }}
               >
                 Retry
@@ -448,7 +383,7 @@ export function LinkField({
 
           {!loading && !error && options.length === 0 && (
             <div className="link-field__message">
-              {searchTerm.trim()
+              {hasTypedSinceFocus && searchTerm.trim()
                 ? 'No matching records found.'
                 : 'No records available.'}
             </div>

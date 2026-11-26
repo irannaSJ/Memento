@@ -1,7 +1,7 @@
-
 import { useEffect, useRef, useState } from 'react'
 import DOMPurify from 'dompurify'
 import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 import {
   mementoApi,
@@ -14,6 +14,7 @@ import { RecordUpdateDialog } from '../../components/form/RecordUpdateDialog'
 
 import './RecordDetailsPage.css'
 
+gsap.registerPlugin(ScrollTrigger)
 
 interface RecordDetailPageProps {
   feature: FeatureDefinition
@@ -139,6 +140,31 @@ function scrollToSection(element: HTMLElement | null) {
   })
 }
 
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text)
+      return true
+    }
+  } catch {
+    // Fallback below
+  }
+
+  try {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    const copied = document.execCommand('copy')
+    document.body.removeChild(textarea)
+    return copied
+  } catch {
+    return false
+  }
+}
+
 export function RecordDetailPage({
   feature,
   recordName,
@@ -151,16 +177,17 @@ export function RecordDetailPage({
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isUpdateOpen, setIsUpdateOpen] = useState(false)
   const [updateMessage, setUpdateMessage] = useState<string | null>(null)
-  // const [copyMessage, setCopyMessage] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [retryKey, setRetryKey] = useState(0)
 
   const rootRef = useRef<HTMLElement>(null)
+  const actionsRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLElement>(null)
   const detailSectionRef = useRef<HTMLElement>(null)
   const descriptionSectionRef = useRef<HTMLElement>(null)
   const descriptionContentRef = useRef<HTMLDivElement>(null)
   const readingProgressRef = useRef<HTMLDivElement>(null)
+  const topProgressRef = useRef<HTMLDivElement>(null)
 
   const isProject = feature.id === 'projects'
 
@@ -206,6 +233,7 @@ export function RecordDetailPage({
     rawDescriptionHtml,
     {
       USE_PROFILES: { html: true },
+      ADD_ATTR: ['data-width', 'data-align'],
     },
   )
 
@@ -227,6 +255,14 @@ export function RecordDetailPage({
 
   const priorityValue = record
     ? plainText(isProject ? record.priority_level : record.priority)
+    : 'Not set'
+
+  const authorValue = record
+    ? plainText(record.created_by || record.assigned_by || record.owner)
+    : 'Not set'
+
+  const publishedDateValue = record
+    ? formatDate(record.creation)
     : 'Not set'
 
   const detailFields: DetailField[] = record
@@ -255,20 +291,18 @@ export function RecordDetailPage({
           },
           {
             label: 'OWNER',
-            value: plainText(
-              record.created_by || record.assigned_by || record.owner,
-            ),
+            value: authorValue,
           },
         ]
       : [
           { label: 'TASK ID', value: record.name },
           {
             label: 'FROM DATE',
-            value: formatDate(record.from_date || record.task_start_time),
+            value: formatDate(record.task_start_time || record.from_date, true),
           },
           {
             label: 'TO DATE',
-            value: formatDate(record.to_date || record.task_end_time),
+            value: formatDate(record.task_end_time || record.to_date, true),
           },
           {
             label: 'PROJECT',
@@ -289,12 +323,12 @@ export function RecordDetailPage({
         ]
     : []
 
-  // Reveal the page in a single GSAP sequence: overview, description, then details.
-  // No ScrollTrigger is needed because the sections animate in reading order.
+  // GSAP + ScrollTrigger reveal choreography
   useEffect(() => {
     if (loading || !record || !rootRef.current) return
 
     const root = rootRef.current
+    const actionsBar = actionsRef.current
     const hero = headerRef.current
     const descriptionSection = descriptionSectionRef.current
     const detailsSection = detailSectionRef.current
@@ -308,79 +342,115 @@ export function RecordDetailPage({
     if (reduceMotion) return
 
     const context = gsap.context(() => {
-      const detailFields = gsap.utils.toArray<HTMLElement>(
-        '.record-detail__field',
-      )
-
-      // Hold detail values until their section has entered, then reveal them
-      // individually. This keeps the three main sections in a clear sequence.
-      gsap.set(detailFields, {
-        autoAlpha: 0,
-        y: 12,
-      })
-
-      const timeline = gsap.timeline({
+      const heroTimeline = gsap.timeline({
         defaults: {
           ease: 'power3.out',
         },
       })
 
-      timeline
-        .fromTo(
-          hero,
-          {
-            autoAlpha: 0,
-            y: 22,
-          },
+      if (actionsBar) {
+        heroTimeline.fromTo(
+          actionsBar,
+          { autoAlpha: 0, y: -10 },
           {
             autoAlpha: 1,
             y: 0,
-            duration: 0.55,
+            duration: 0.4,
             clearProps: 'opacity,visibility,transform',
           },
           0,
         )
+      }
+
+      heroTimeline
         .fromTo(
-          descriptionSection,
-          {
-            autoAlpha: 0,
-            y: 20,
-          },
+          '.record-detail__eyebrow',
+          { autoAlpha: 0, y: 12 },
           {
             autoAlpha: 1,
             y: 0,
-            duration: 0.48,
+            duration: 0.42,
             clearProps: 'opacity,visibility,transform',
           },
-          '+=0.12',
+          0.06,
         )
         .fromTo(
-          detailsSection,
-          {
-            autoAlpha: 0,
-            y: 20,
-          },
+          '.record-detail__title-copy h1',
+          { autoAlpha: 0, y: 18 },
           {
             autoAlpha: 1,
             y: 0,
-            duration: 0.48,
+            duration: 0.52,
             clearProps: 'opacity,visibility,transform',
           },
-          '+=0.12',
+          0.12,
+        )
+        .fromTo(
+          '.record-detail__byline',
+          { autoAlpha: 0, y: 12 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.44,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0.2,
         )
 
-      if (detailFields.length > 0) {
-        timeline.to(
-          detailFields,
+      gsap.fromTo(
+        descriptionSection,
+        { autoAlpha: 0, y: 22 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.52,
+          ease: 'power3.out',
+          clearProps: 'opacity,visibility,transform',
+          scrollTrigger: {
+            trigger: descriptionSection,
+            start: 'top 88%',
+            once: true,
+          },
+        },
+      )
+
+      const detailFieldEls = gsap.utils.toArray<HTMLElement>(
+        '.record-detail__field',
+      )
+
+      const detailsTimeline = gsap.timeline({
+        scrollTrigger: {
+          trigger: detailsSection,
+          start: 'top 88%',
+          once: true,
+        },
+      })
+
+      detailsTimeline.fromTo(
+        detailsSection.querySelector('.record-detail__section-heading'),
+        { autoAlpha: 0, y: 18 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.45,
+          ease: 'power3.out',
+          clearProps: 'opacity,visibility,transform',
+        },
+      )
+
+      if (detailFieldEls.length > 0) {
+        detailsTimeline.fromTo(
+          detailFieldEls,
+          { autoAlpha: 0, y: 16 },
           {
             autoAlpha: 1,
             y: 0,
-            duration: 0.28,
-            stagger: 0.045,
+            duration: 0.38,
+            stagger: 0.055,
             ease: 'power2.out',
             clearProps: 'opacity,visibility,transform',
           },
-          '-=0.04',
+          '-=0.2',
         )
       }
     }, root)
@@ -390,18 +460,18 @@ export function RecordDetailPage({
     }
   }, [loading, record, recordName])
 
-  // Update the description reading progress without forcing a React
-  // render for every scroll event.
+  // Update reading progress bars smoothly on scroll
   useEffect(() => {
     const section = descriptionSectionRef.current
     const progressBar = readingProgressRef.current
+    const topProgressBar = topProgressRef.current
 
-    if (!section || !progressBar) return
+    if (!section) return
 
     const updateProgress = () => {
       const bounds = section.getBoundingClientRect()
-      const totalDistance = bounds.height + window.innerHeight
-      const travelled = window.innerHeight - bounds.top
+      const totalDistance = bounds.height + window.innerHeight * 0.45
+      const travelled = window.innerHeight * 0.65 - bounds.top
 
       const progress = totalDistance > 0
         ? Math.round(
@@ -409,8 +479,14 @@ export function RecordDetailPage({
           )
         : 0
 
-      progressBar.style.width = `${progress}%`
-      progressBar.setAttribute('aria-valuenow', String(progress))
+      if (progressBar) {
+        progressBar.style.width = `${progress}%`
+        progressBar.setAttribute('aria-valuenow', String(progress))
+      }
+
+      if (topProgressBar) {
+        topProgressBar.style.width = `${progress}%`
+      }
     }
 
     updateProgress()
@@ -426,14 +502,65 @@ export function RecordDetailPage({
     }
   }, [safeDescriptionHtml, recordName])
 
-  // Make embedded description images open in an accessible preview.
+  // Inject Copy buttons into <pre> code blocks & enable zoom on embedded images
   useEffect(() => {
     const container = descriptionContentRef.current
     if (!container) return
 
-    const images = Array.from(container.querySelectorAll('img'))
+    // 1. Code block Copy buttons
+    const preBlocks = Array.from(container.querySelectorAll('pre'))
+    const codeCleanups = preBlocks.map((pre) => {
+      pre.classList.add('record-detail__code-block')
 
-    const cleanups = images.map((image) => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'record-detail__code-copy'
+      button.setAttribute('aria-label', 'Copy code snippet')
+      button.innerHTML =
+        '<i class="ri-file-copy-line" aria-hidden="true"></i><span>Copy</span>'
+
+      let resetTimer: number | null = null
+
+      const handleCopy = async () => {
+        const codeEl = pre.querySelector('code')
+        const rawText = (codeEl?.textContent ?? pre.textContent ?? '').replace(
+          /\n$/,
+          '',
+        )
+
+        const ok = await copyTextToClipboard(rawText)
+        if (!ok) return
+
+        button.classList.add('is-copied')
+        button.innerHTML =
+          '<i class="ri-check-line" aria-hidden="true"></i><span>Copied!</span>'
+
+        if (resetTimer !== null) {
+          window.clearTimeout(resetTimer)
+        }
+
+        resetTimer = window.setTimeout(() => {
+          button.classList.remove('is-copied')
+          button.innerHTML =
+            '<i class="ri-file-copy-line" aria-hidden="true"></i><span>Copy</span>'
+        }, 1800)
+      }
+
+      button.addEventListener('click', handleCopy)
+      pre.appendChild(button)
+
+      return () => {
+        if (resetTimer !== null) {
+          window.clearTimeout(resetTimer)
+        }
+        button.removeEventListener('click', handleCopy)
+        button.remove()
+      }
+    })
+
+    // 2. Embedded image lightbox triggers
+    const images = Array.from(container.querySelectorAll('img'))
+    const imageCleanups = images.map((image) => {
       const previousTabIndex = image.getAttribute('tabindex')
       const previousRole = image.getAttribute('role')
       const previousLabel = image.getAttribute('aria-label')
@@ -487,7 +614,8 @@ export function RecordDetailPage({
     })
 
     return () => {
-      cleanups.forEach((cleanup) => cleanup())
+      codeCleanups.forEach((cleanup) => cleanup())
+      imageCleanups.forEach((cleanup) => cleanup())
     }
   }, [safeDescriptionHtml, loading, recordName])
 
@@ -508,24 +636,13 @@ export function RecordDetailPage({
     }
   }, [imagePreview])
 
-  // async function handleCopyRecordId() {
-  //   if (!record) return
-
-  //   try {
-  //     await navigator.clipboard.writeText(record.name)
-  //     setCopyMessage('Record ID copied')
-  //   } catch {
-  //     setCopyMessage('Unable to copy automatically')
-  //   }
-  // }
-
   if (loading) {
     return (
       <section className="record-detail record-detail--state">
         <div className="record-detail__state-indicator" aria-hidden="true">
           <span />
         </div>
-        <p role="status">Preparing your {isProject ? 'project' : 'task'} details…</p>
+        <p role="status">Preparing your {isProject ? 'project' : 'task'} story…</p>
       </section>
     )
   }
@@ -572,370 +689,262 @@ export function RecordDetailPage({
       data-record-type={feature.id}
       aria-labelledby="record-detail-title"
     >
-      <div className="record-detail__actions">
-        <button
-          type="button"
-          className="record-detail__secondary"
-          onClick={onClose}
-        >
-          <i className="ri-arrow-left-line" aria-hidden="true" />
-          Back to {feature.itemPlural}
-        </button>
-
-        <div className="record-detail__actions-spacer" />
-
-        {metadata?.capabilities.can_update && (
-          <button
-            type="button"
-            className="record-detail__update"
-            onClick={() => setIsUpdateOpen(true)}
-          >
-            <i className="ri-edit-line" aria-hidden="true" />
-            Update
-          </button>
-        )}
+      {/* Subtle fixed reading line across top of viewport */}
+      <div className="record-detail__top-progress" aria-hidden="true">
+        <div
+          ref={topProgressRef}
+          className="record-detail__top-progress-fill"
+        />
       </div>
 
-      {updateMessage && (
-        <div className="record-detail__notice" role="status">
-          <i className="ri-checkbox-circle-line" aria-hidden="true" />
-          <span>{updateMessage}</span>
+      {/* Centered Medium Editorial Column */}
+      <div className="record-detail__column">
+        <div ref={actionsRef} className="record-detail__actions">
           <button
             type="button"
-            className="record-detail__notice-dismiss"
-            aria-label="Dismiss notification"
-            onClick={() => setUpdateMessage(null)}
+            className="record-detail__secondary"
+            onClick={onClose}
           >
-            <i className="ri-close-line" aria-hidden="true" />
+            <i className="ri-arrow-left-line" aria-hidden="true" />
+            Back to {feature.itemPlural}
           </button>
-        </div>
-      )}
 
-      <header
-        ref={headerRef}
-        className="record-detail__header"
-        data-detail-stage="hero"
-      >
-        <div className="record-detail__hero-art" aria-hidden="true">
-          <span className="record-detail__hero-orb record-detail__hero-orb--one" />
-          <span className="record-detail__hero-orb record-detail__hero-orb--two" />
-          <span className="record-detail__hero-grid" />
+          <div className="record-detail__actions-spacer" />
+
+          <button
+            type="button"
+            className="record-detail__jump-btn"
+            onClick={() => scrollToSection(detailSectionRef.current)}
+          >
+            <i className="ri-information-line" aria-hidden="true" />
+            <span>{isProject ? 'Project details' : 'Task details'}</span>
+          </button>
+
+          {metadata?.capabilities.can_update && (
+            <button
+              type="button"
+              className="record-detail__update"
+              onClick={() => setIsUpdateOpen(true)}
+            >
+              <i className="ri-edit-line" aria-hidden="true" />
+              Edit story
+            </button>
+          )}
         </div>
 
-        <div className="record-detail__hero-content">
+        {updateMessage && (
+          <div className="record-detail__notice" role="status">
+            <i className="ri-checkbox-circle-line" aria-hidden="true" />
+            <span>{updateMessage}</span>
+            <button
+              type="button"
+              className="record-detail__notice-dismiss"
+              aria-label="Dismiss notification"
+              onClick={() => setUpdateMessage(null)}
+            >
+              <i className="ri-close-line" aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
+        {/* Medium-style Article Header */}
+        <header
+          ref={headerRef}
+          className="record-detail__header"
+          data-detail-stage="hero"
+        >
           <div className="record-detail__eyebrow">
             <span>MEMENTO</span>
             <i className="ri-arrow-right-s-line" aria-hidden="true" />
-            <span>{isProject ? 'PROJECTS' : 'TASKS'}</span>
+            <span>{isProject ? 'PROJECT BRIEF' : 'TASK NOTE'}</span>
             <i className="ri-arrow-right-s-line" aria-hidden="true" />
             <span className="record-detail__eyebrow-id">{record.name}</span>
           </div>
 
-          <div className="record-detail__title-row">
+          <div className="record-detail__title-copy">
+            <h1 id="record-detail-title">{displayTitle}</h1>
+          </div>
+
+          {/* Author & Reading Metadata Byline */}
+          <div className="record-detail__byline">
+            <div className="record-detail__byline-author">
+              <span className="record-detail__avatar" aria-hidden="true">
+                <i className={isProject ? 'ri-folders-line' : 'ri-task-line'} />
+              </span>
+
+              <div className="record-detail__byline-meta">
+                <strong>
+                  {authorValue !== 'Not set' ? authorValue : 'Memento Workspace'}
+                </strong>
+                <span>
+                  {readingMinutes > 0 ? `${readingMinutes} min read` : 'Quick note'}
+                  {wordCount > 0 ? ` · ${wordCount.toLocaleString('en-IN')} words` : ''}
+                  {publishedDateValue !== 'Not set' ? ` · ${publishedDateValue}` : ''}
+                </span>
+              </div>
+            </div>
+
+            <div className="record-detail__badges">
+              {statusValue !== 'Not set' && (
+                <span
+                  className={`record-detail__badge record-detail__badge--status record-detail__badge--${slugify(statusValue)}`}
+                >
+                  <span className="record-detail__badge-dot" aria-hidden="true" />
+                  {statusValue}
+                </span>
+              )}
+
+              {priorityValue !== 'Not set' && (
+                <span
+                  className={`record-detail__badge record-detail__badge--priority record-detail__badge--${slugify(priorityValue)}`}
+                >
+                  <i className="ri-flag-2-line" aria-hidden="true" />
+                  {priorityValue}
+                </span>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* 01 / Medium Editorial Article Body */}
+        <section
+          ref={descriptionSectionRef}
+          className="record-detail__section record-detail__description-section"
+          data-detail-stage="description"
+          aria-labelledby="record-detail-description-heading"
+        >
+          <div className="record-detail__reading-card">
+            <div className="record-detail__reading-topline">
+              <div className="record-detail__reading-label">
+                <span className="record-detail__section-index" id="record-detail-description-heading">
+                  {isProject ? 'PROJECT DESCRIPTION' : 'TASK DESCRIPTION'}
+                </span>
+              </div>
+
+              <span className="record-detail__reading-hint">
+                <i className="ri-book-open-line" aria-hidden="true" />
+                Editorial view
+              </span>
+            </div>
+
             <div
-              className="record-detail__hero-icon"
-              aria-hidden="true"
+              className="record-detail__reading-progress"
+              role="progressbar"
+              aria-label="Description reading progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={0}
             >
-              <i
-                className={
-                  isProject
-                    ? 'ri-folders-line'
-                    : 'ri-task-line'
-                }
+              <div
+                ref={readingProgressRef}
+                className="record-detail__reading-progress-fill"
               />
             </div>
 
-            <div className="record-detail__title-copy">
-              <h1 id="record-detail-title">
-                {displayTitle}
-              </h1>
+            {safeDescriptionHtml.trim() && description !== 'Not set' ? (
+              <div
+                ref={descriptionContentRef}
+                className="record-detail__description"
+                dangerouslySetInnerHTML={{
+                  __html: safeDescriptionHtml,
+                }}
+              />
+            ) : (
+              <div className="record-detail__empty-description">
+                <span className="record-detail__empty-icon" aria-hidden="true">
+                  <i className="ri-quill-pen-line" />
+                </span>
 
-              {/* <p className="record-detail__type-label">
-                {isProject ? 'PROJECT OVERVIEW' : 'TASK OVERVIEW'}
-                <span aria-hidden="true"> · </span>
-                Your workspace, in detail
-              </p> */}
+                <h3>Nothing written here yet</h3>
+
+                <p>
+                  Write a detailed description with headings, code snippets,
+                  links, and screenshots for this {isProject ? 'project' : 'task'}.
+                </p>
+
+                {metadata?.capabilities.can_update && (
+                  <button
+                    type="button"
+                    className="record-detail__empty-action"
+                    onClick={() => setIsUpdateOpen(true)}
+                  >
+                    <i className="ri-edit-line" aria-hidden="true" />
+                    Write description
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Medium signature three-dot section break */}
+            <div className="record-detail__story-break" aria-hidden="true">
+              <span />
+              <span />
+              <span />
             </div>
-          </div>
 
-          {/* {description !== 'Not set' && (
-            <p className="record-detail__intro">
-              {description.length > 240
-                ? `${description.slice(0, 240).trimEnd()}…`
-                : description}
-            </p>
-          )} */}
-
-          <div className="record-detail__badges">
-            {statusValue !== 'Not set' && (
-              <span
-                className={`record-detail__badge record-detail__badge--status record-detail__badge--${slugify(statusValue)}`}
-              >
-                <span className="record-detail__badge-dot" aria-hidden="true" />
-                {statusValue}
-              </span>
-            )}
-
-            {priorityValue !== 'Not set' && (
-              <span
-                className={`record-detail__badge record-detail__badge--priority record-detail__badge--${slugify(priorityValue)}`}
-              >
-                <i className="ri-flag-2-line" aria-hidden="true" />
-                {priorityValue} priority
-              </span>
-            )}
-          </div>
-
-          {/* <div className="record-detail__hero-foot">
-            <div className="record-detail__record-reference">
-              <span className="record-detail__record-reference-icon">
-                <i className="ri-hashtag" aria-hidden="true" />
-              </span>
-
-              <span className="record-detail__record-reference-copy">
-                <span>RECORD ID</span>
-                <strong>{record.name}</strong>
+            <div className="record-detail__reading-footer">
+              <span>
+                <i className="ri-shield-check-line" aria-hidden="true" />
+                End of {isProject ? 'project' : 'task'} description
               </span>
 
               <button
                 type="button"
-                className="record-detail__copy-button"
-                onClick={() => void handleCopyRecordId()}
-                aria-label="Copy record ID"
-                title="Copy record ID"
+                onClick={() => scrollToSection(headerRef.current)}
               >
-                <i
-                  className={
-                    copyMessage === 'Record ID copied'
-                      ? 'ri-check-line'
-                      : 'ri-file-copy-line'
-                  }
-                  aria-hidden="true"
-                />
+                Back to top
+                <i className="ri-arrow-up-line" aria-hidden="true" />
               </button>
             </div>
-
-            <button
-              type="button"
-              className="record-detail__read-button"
-              onClick={() => scrollToSection(descriptionSectionRef.current)}
-            >
-              Explore description
-              <i className="ri-arrow-down-line" aria-hidden="true" />
-            </button>
           </div>
+        </section>
 
-          {copyMessage && (
-            <p className="record-detail__copy-feedback" role="status">
-              {copyMessage}
-            </p>
-          )} */}
-        </div>
-      </header>
-
-      {/* <nav
-        className="record-detail__section-nav"
-        aria-label="Record sections"
-      >
-        <span className="record-detail__section-nav-label">
-          EXPLORE THIS RECORD
-        </span>
-
-        <button
-          type="button"
-          onClick={() => scrollToSection(headerRef.current)}
+        {/* 02 / Record Metadata Appendix */}
+        <section
+          ref={detailSectionRef}
+          className="record-detail__section record-detail__details-section"
+          data-detail-stage="details"
+          aria-labelledby="record-detail-fields-heading"
         >
-          <i className="ri-layout-top-line" aria-hidden="true" />
-          Overview
-        </button>
+          <div className="record-detail__section-heading">
+            <div>
+              <span className="record-detail__section-index">RECORD METADATA</span>
 
-        <button
-          type="button"
-          onClick={() => scrollToSection(detailSectionRef.current)}
-        >
-          <i className="ri-list-check-2" aria-hidden="true" />
-          Details
-        </button>
-
-        <button
-          type="button"
-          onClick={() => scrollToSection(descriptionSectionRef.current)}
-        >
-          <i className="ri-book-open-line" aria-hidden="true" />
-          Description
-        </button>
-      </nav> */}
-
-      <section
-        ref={descriptionSectionRef}
-        className="record-detail__section record-detail__description-section"
-        data-detail-stage="description"
-        aria-labelledby="record-detail-description-heading"
-      >
-        <div className="record-detail__section-heading record-detail__description-heading">
-          <div>
-            <span className="record-detail__section-index">01 / THE FULL STORY</span>
-
-            <h2 id="record-detail-description-heading">
-              {isProject ? 'Project description' : 'Task description'}
-            </h2>
-
-            <p>
-              Take a closer look at the context, notes, and information
-              saved with this record.
-            </p>
-          </div>
-
-          <span className="record-detail__section-symbol" aria-hidden="true">
-            <i className="ri-book-open-line" />
-          </span>
-        </div>
-
-        <div className="record-detail__reading-card">
-          <div className="record-detail__reading-topline">
-            <div className="record-detail__reading-label">
-              <span className="record-detail__reading-icon" aria-hidden="true">
-                <i className="ri-book-2-line" />
-              </span>
-
-              <span>
-                <strong>Project notes</strong>
-                <small>
-                  {wordCount > 0
-                    ? `${wordCount.toLocaleString('en-IN')} words`
-                    : 'Record description'}
-                  {readingMinutes > 0
-                    ? ` · ${readingMinutes} min read`
-                    : ''}
-                </small>
-              </span>
-            </div>
-
-            <span className="record-detail__reading-hint">
-              <i className="ri-focus-3-line" aria-hidden="true" />
-              Reading view
-            </span>
-          </div>
-
-          <div
-            className="record-detail__reading-progress"
-            role="progressbar"
-            aria-label="Description reading progress"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={0}
-          >
-            <div
-              ref={readingProgressRef}
-              className="record-detail__reading-progress-fill"
-            />
-          </div>
-
-          {safeDescriptionHtml.trim() && description !== 'Not set' ? (
-            <div
-              ref={descriptionContentRef}
-              className="record-detail__description"
-              dangerouslySetInnerHTML={{
-                __html: safeDescriptionHtml,
-              }}
-            />
-          ) : (
-            <div className="record-detail__empty-description">
-              <span className="record-detail__empty-icon" aria-hidden="true">
-                <i className="ri-quill-pen-line" />
-              </span>
-
-              <h3>Nothing written here yet</h3>
+              <h2 id="record-detail-fields-heading">
+                {isProject ? 'Project details' : 'Task details'}
+              </h2>
 
               <p>
-                Add a description to capture important context, links,
-                images, and notes for this {isProject ? 'project' : 'task'}.
+                Structured attributes and timeline information attached to this{' '}
+                {isProject ? 'project' : 'task'}.
               </p>
-
-              {metadata?.capabilities.can_update && (
-                <button
-                  type="button"
-                  className="record-detail__empty-action"
-                  onClick={() => setIsUpdateOpen(true)}
-                >
-                  <i className="ri-edit-line" aria-hidden="true" />
-                  Add description
-                </button>
-              )}
             </div>
-          )}
 
-          <div className="record-detail__reading-footer">
-            <span>
-              <i className="ri-shield-check-line" aria-hidden="true" />
-              End of description
+            <span className="record-detail__section-symbol" aria-hidden="true">
+              <i className="ri-layout-grid-line" />
             </span>
-
-            <button
-              type="button"
-              onClick={() => scrollToSection(headerRef.current)}
-            >
-              Back to top
-              <i className="ri-arrow-up-line" aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-      </section>
-
-
-      <section
-        ref={detailSectionRef}
-        className="record-detail__section record-detail__details-section"
-        data-detail-stage="details"
-        aria-labelledby="record-detail-fields-heading"
-      >
-        <div className="record-detail__section-heading">
-          <div>
-            <span className="record-detail__section-index">02 / THE BASICS</span>
-
-            <h2 id="record-detail-fields-heading">
-              {isProject ? 'Project details' : 'Task details'}
-            </h2>
-
-            <p>
-              Everything important about this {isProject ? 'project' : 'task'},
-              organised in one place.
-            </p>
           </div>
 
-          <span className="record-detail__section-symbol" aria-hidden="true">
-            <i className="ri-layout-grid-line" />
-          </span>
-        </div>
+          <div className="record-detail__grid">
+            {detailFields.map((field, index) => (
+              <div
+                className="record-detail__field"
+                key={field.label}
+                data-field-index={index}
+              >
+                <div className="record-detail__field-icon" aria-hidden="true">
+                  <i className={getDetailIcon(field.label)} />
+                </div>
 
-        <div className="record-detail__grid">
-          {detailFields.map((field, index) => (
-            <div
-              className="record-detail__field"
-              key={field.label}
-              data-field-index={index}
-            >
-              <div className="record-detail__field-icon" aria-hidden="true">
-                <i className={getDetailIcon(field.label)} />
+                <div className="record-detail__field-copy">
+                  <span>{field.label}</span>
+                  <strong>{field.value}</strong>
+                </div>
               </div>
-
-              <div className="record-detail__field-copy">
-                <span>{field.label}</span>
-                <strong>{field.value}</strong>
-              </div>
-
-              <span className="record-detail__field-decoration" aria-hidden="true">
-                <i className="ri-arrow-up-right-line" />
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-
-
-
-
+            ))}
+          </div>
+        </section>
+      </div>
 
       {imagePreview && (
         <div className="record-detail__image-preview">

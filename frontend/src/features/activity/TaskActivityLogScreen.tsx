@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import gsap from 'gsap'
 
 import { AppCombobox } from '../../components/controls'
 import {
@@ -48,16 +49,19 @@ function parseDateKey(dateKey: string): Date {
   return new Date(year, month - 1, day)
 }
 
-function addDays(date: Date, days: number): Date {
-  const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  copy.setDate(copy.getDate() + days)
-  return copy
+function getMonthDays(anchorDate: Date): Date[] {
+  const year = anchorDate.getFullYear()
+  const month = anchorDate.getMonth()
+  const totalDays = new Date(year, month + 1, 0).getDate()
+  return Array.from({ length: totalDays }, (_, idx) => new Date(year, month, idx + 1))
 }
 
-function getWeekDays(anchorDate: Date): Date[] {
-  const dayOfWeek = anchorDate.getDay() // 0 = Sun
-  const sunday = addDays(anchorDate, -dayOfWeek)
-  return Array.from({ length: 7 }, (_, idx) => addDays(sunday, idx))
+function shiftMonthPreserveDay(anchorDate: Date, monthDelta: number): Date {
+  const targetYear = anchorDate.getFullYear()
+  const targetMonth = anchorDate.getMonth() + monthDelta
+  const maxDayInTarget = new Date(targetYear, targetMonth + 1, 0).getDate()
+  const clampedDay = Math.min(anchorDate.getDate(), maxDayInTarget)
+  return new Date(targetYear, targetMonth, clampedDay)
 }
 
 function formatMonthYear(date: Date): string {
@@ -146,7 +150,16 @@ export function TaskActivityLogScreen({
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
+  const rootRef = useRef<HTMLElement>(null)
   const timelineEndRef = useRef<HTMLDivElement | null>(null)
+  const arcScrollerRef = useRef<HTMLDivElement | null>(null)
+  const dayButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const dragStateRef = useRef({
+    isDown: false,
+    startX: 0,
+    startScrollLeft: 0,
+    moved: false,
+  })
 
   useEffect(() => {
     if (taskId) {
@@ -159,6 +172,133 @@ export function TaskActivityLogScreen({
       setSelectedDate(initialDate)
     }
   }, [initialDate])
+
+  // Close open comment dropdown menu on outside click or Escape
+  useEffect(() => {
+    if (!openMenuId) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null
+      if (!target?.closest('.activity-comment-card__menu-wrap')) {
+        setOpenMenuId(null)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenMenuId(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [openMenuId])
+
+  // Initial GSAP workspace entrance
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+
+    if (reduceMotion) return
+
+    const context = gsap.context(() => {
+      const timeline = gsap.timeline({
+        defaults: { ease: 'power3.out' },
+      })
+
+      timeline
+        .fromTo(
+          '.activity-log-header__left > *',
+          { autoAlpha: 0, y: 12 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.4,
+            stagger: 0.05,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0,
+        )
+        .fromTo(
+          '.activity-log-todos-btn',
+          { autoAlpha: 0, y: 10 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.36,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0.12,
+        )
+        .fromTo(
+          '.activity-log-main',
+          { autoAlpha: 0, y: 16 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.46,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0.14,
+        )
+        .fromTo(
+          '.activity-calendar-card',
+          { autoAlpha: 0, y: 18 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.48,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0.18,
+        )
+    }, root)
+
+    return () => context.revert()
+  }, [])
+
+  // Animate timeline rows smoothly whenever comments finish loading
+  useEffect(() => {
+    if (isLoading || comments.length === 0) return
+
+    const root = rootRef.current
+    if (!root) return
+
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+
+    if (reduceMotion) return
+
+    const context = gsap.context(() => {
+      const rows = gsap.utils.toArray<HTMLElement>('.activity-timeline__row')
+      if (rows.length === 0) return
+
+      gsap.fromTo(
+        rows,
+        { autoAlpha: 0, y: 12 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.34,
+          stagger: 0.045,
+          ease: 'power2.out',
+          clearProps: 'opacity,visibility,transform',
+        },
+      )
+    }, root)
+
+    return () => context.revert()
+  }, [isLoading, comments.length, selectedTaskId, selectedDate])
 
   // Load Projects & Tasks for context display and task switching
   useEffect(() => {
@@ -261,12 +401,117 @@ export function TaskActivityLogScreen({
     void loadActivity()
   }, [loadActivity])
 
-  const weekDays = useMemo(
-    () => getWeekDays(parseDateKey(selectedDate)),
+  const monthDays = useMemo(
+    () => getMonthDays(parseDateKey(selectedDate)),
     [selectedDate],
   )
 
   const loggedDateSet = useMemo(() => new Set(loggedDates), [loggedDates])
+
+  // Continuous wheel curve: places every visible date along the curved arc
+  const updateArcPositions = useCallback(() => {
+    const scroller = arcScrollerRef.current
+    if (!scroller) return
+
+    const scrollerRect = scroller.getBoundingClientRect()
+    const centerX = scrollerRect.left + scrollerRect.width / 2
+    const halfSpan = Math.max(scrollerRect.width * 0.46, 1)
+
+    for (const key of Object.keys(dayButtonRefs.current)) {
+      const btn = dayButtonRefs.current[key]
+      if (!btn) continue
+
+      const rect = btn.getBoundingClientRect()
+      const itemCenterX = rect.left + rect.width / 2
+      const signedRatio = (itemCenterX - centerX) / halfSpan
+      const absRatio = Math.abs(signedRatio)
+
+      // Parabolic drop along the curved SVG arc + subtle wheel tangent tilt
+      const offsetY = Math.min(34, absRatio * absRatio * 20)
+      const tiltDeg = Math.max(-14, Math.min(14, signedRatio * 9.5))
+      const opacity = Math.max(0.22, 1 - Math.max(0, absRatio - 0.72) * 1.45)
+
+      btn.style.transform = `translate3d(0, ${offsetY.toFixed(1)}px, 0) rotate(${tiltDeg.toFixed(1)}deg)`
+      btn.style.opacity = opacity.toFixed(2)
+    }
+  }, [])
+
+  // Center the selected date smoothly in the curved wheel whenever selectedDate changes
+  useEffect(() => {
+    const scroller = arcScrollerRef.current
+    const targetBtn = dayButtonRefs.current[selectedDate]
+
+    if (!scroller || !targetBtn) return
+
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+
+    const targetLeft =
+      targetBtn.offsetLeft -
+      scroller.clientWidth / 2 +
+      targetBtn.offsetWidth / 2
+
+    scroller.scrollTo({
+      left: Math.max(0, targetLeft),
+      behavior: reduceMotion ? 'auto' : 'smooth',
+    })
+
+    const frameId = requestAnimationFrame(updateArcPositions)
+    return () => cancelAnimationFrame(frameId)
+  }, [selectedDate, monthDays, updateArcPositions])
+
+  useEffect(() => {
+    updateArcPositions()
+    window.addEventListener('resize', updateArcPositions)
+    return () => window.removeEventListener('resize', updateArcPositions)
+  }, [updateArcPositions])
+
+  function handleArcWheel(event: React.WheelEvent<HTMLDivElement>) {
+    const scroller = arcScrollerRef.current
+    if (!scroller) return
+
+    if (Math.abs(event.deltaY) > Math.abs(event.deltaX) && event.deltaY !== 0) {
+      event.preventDefault()
+      scroller.scrollLeft += event.deltaY
+    }
+  }
+
+  function handleArcMouseDown(event: React.MouseEvent<HTMLDivElement>) {
+    const scroller = arcScrollerRef.current
+    if (!scroller) return
+
+    dragStateRef.current = {
+      isDown: true,
+      startX: event.pageX,
+      startScrollLeft: scroller.scrollLeft,
+      moved: false,
+    }
+  }
+
+  function handleArcMouseMove(event: React.MouseEvent<HTMLDivElement>) {
+    const scroller = arcScrollerRef.current
+    const state = dragStateRef.current
+    if (!scroller || !state.isDown) return
+
+    const deltaX = event.pageX - state.startX
+    if (Math.abs(deltaX) > 4) {
+      state.moved = true
+    }
+    scroller.scrollLeft = state.startScrollLeft - deltaX
+  }
+
+  function handleArcMouseUpOrLeave() {
+    dragStateRef.current.isDown = false
+    requestAnimationFrame(() => {
+      dragStateRef.current.moved = false
+    })
+  }
+
+  function shiftMonth(monthDelta: number) {
+    const nextDate = shiftMonthPreserveDay(parseDateKey(selectedDate), monthDelta)
+    setSelectedDate(toLocalDateKey(nextDate))
+  }
 
   const taskComboOptions = useMemo(
     () =>
@@ -361,13 +606,12 @@ export function TaskActivityLogScreen({
     }
   }
 
-  function shiftWeek(offsetDays: number) {
-    const nextDate = addDays(parseDateKey(selectedDate), offsetDays)
-    setSelectedDate(toLocalDateKey(nextDate))
-  }
-
   return (
-    <main className="activity-log-screen" aria-labelledby="activity-log-heading">
+    <main
+      ref={rootRef}
+      className="activity-log-screen"
+      aria-labelledby="activity-log-heading"
+    >
       <header className="activity-log-header">
         <div className="activity-log-header__left">
           {onBack && (
@@ -404,7 +648,7 @@ export function TaskActivityLogScreen({
       </header>
 
       <div className="activity-log-layout">
-        {/* LEFT 70%: Comments & Activity Timeline + Bottom Comment Composer */}
+        {/* LEFT 70%: Scrollable Comments & Activity Timeline + Bottom Comment Composer */}
         <section className="activity-log-main" aria-label="Task activity and comments">
           <div className="activity-log-feed-header">
             <h2>Activity &amp; Comments</h2>
@@ -474,6 +718,7 @@ export function TaskActivityLogScreen({
                                   type="button"
                                   className="activity-comment-card__more-btn"
                                   aria-label="More actions"
+                                  aria-expanded={openMenuId === comment.name}
                                   onClick={() =>
                                     setOpenMenuId((prev) =>
                                       prev === comment.name ? null : comment.name,
@@ -612,53 +857,81 @@ export function TaskActivityLogScreen({
           </form>
         </section>
 
-        {/* RIGHT 30%: Curved Weekly Date Selector + Task Context */}
+        {/* RIGHT 30%: Scrollable Curved Monthly Date Selector + Task Context */}
         <aside className="activity-log-sidebar" aria-label="Date and task selector">
           <section className="activity-calendar-card">
             <div className="activity-arc-calendar" role="group" aria-label="Select date">
-              <div className="activity-arc-calendar__arc" aria-hidden="true" />
+              <svg
+                className="activity-arc-calendar__svg"
+                viewBox="0 0 360 44"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M 12 36 Q 180 -6 348 36"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.25"
+                />
+              </svg>
 
-              <div className="activity-arc-calendar__days">
-                {weekDays.map((dayObj, index) => {
-                  const key = toLocalDateKey(dayObj)
-                  const isSelected = key === selectedDate
-                  const hasLog = loggedDateSet.has(key)
-                  // Parabolic vertical offset matching the curved week arc
-                  const distanceFromCenter = Math.abs(index - 3)
-                  const offsetPx = distanceFromCenter * distanceFromCenter * 3.5
+              <div
+                ref={arcScrollerRef}
+                className="activity-arc-calendar__scroller"
+                onScroll={updateArcPositions}
+                onWheel={handleArcWheel}
+                onMouseDown={handleArcMouseDown}
+                onMouseMove={handleArcMouseMove}
+                onMouseUp={handleArcMouseUpOrLeave}
+                onMouseLeave={handleArcMouseUpOrLeave}
+              >
+                <div className="activity-arc-calendar__days">
+                  {monthDays.map((dayObj) => {
+                    const key = toLocalDateKey(dayObj)
+                    const isSelected = key === selectedDate
+                    const hasLog = loggedDateSet.has(key)
 
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      className={`activity-arc-day${isSelected ? ' is-selected' : ''}${hasLog ? ' has-log' : ''}`}
-                      style={{ transform: `translateY(${offsetPx}px)` }}
-                      onClick={() => setSelectedDate(key)}
-                      aria-pressed={isSelected}
-                    >
-                      <span className="activity-arc-day__weekday">
-                        {WEEKDAY_SHORT[dayObj.getDay()]}
-                      </span>
-                      <span className="activity-arc-day__num">{dayObj.getDate()}</span>
-                      {hasLog && <span className="activity-arc-day__dot" aria-hidden="true" />}
-                    </button>
-                  )
-                })}
+                    return (
+                      <button
+                        key={key}
+                        ref={(el) => {
+                          dayButtonRefs.current[key] = el
+                        }}
+                        type="button"
+                        className={`activity-arc-day${isSelected ? ' is-selected' : ''}${hasLog ? ' has-log' : ''}`}
+                        onClick={() => {
+                          if (!dragStateRef.current.moved) {
+                            setSelectedDate(key)
+                          }
+                        }}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="activity-arc-day__weekday">
+                          {WEEKDAY_SHORT[dayObj.getDay()]}
+                        </span>
+                        <span className="activity-arc-day__num">{dayObj.getDate()}</span>
+                        {hasLog && <span className="activity-arc-day__dot" aria-hidden="true" />}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               <div className="activity-arc-calendar__nav">
                 <button
                   type="button"
-                  onClick={() => shiftWeek(-7)}
-                  aria-label="Previous week"
+                  onClick={() => shiftMonth(-1)}
+                  aria-label="Previous month"
+                  title="Previous month"
                 >
                   <i className="ri-arrow-left-s-line" aria-hidden="true" />
                 </button>
                 <strong>{formatMonthYear(parseDateKey(selectedDate))}</strong>
                 <button
                   type="button"
-                  onClick={() => shiftWeek(7)}
-                  aria-label="Next week"
+                  onClick={() => shiftMonth(1)}
+                  aria-label="Next month"
+                  title="Next month"
                 >
                   <i className="ri-arrow-right-s-line" aria-hidden="true" />
                 </button>

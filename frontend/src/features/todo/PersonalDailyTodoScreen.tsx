@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import gsap from 'gsap'
 
 import {
   AppDatePicker,
@@ -111,6 +112,9 @@ export function PersonalDailyTodoScreen({ onBack }: PersonalDailyTodoScreenProps
   // Modify Dialog state
   const [editingId, setEditingId] = useState<string | null>(null)
 
+  const rootRef = useRef<HTMLElement>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (!editingId) return
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -120,6 +124,97 @@ export function PersonalDailyTodoScreen({ onBack }: PersonalDailyTodoScreenProps
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [editingId])
+
+  // Initial GSAP workspace entrance
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+
+    if (reduceMotion) return
+
+    const context = gsap.context(() => {
+      const timeline = gsap.timeline({
+        defaults: { ease: 'power3.out' },
+      })
+
+      timeline
+        .fromTo(
+          '.daily-intent-header__copy > *',
+          { autoAlpha: 0, y: 12 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.4,
+            stagger: 0.05,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0,
+        )
+        .fromTo(
+          '.daily-intent-header__date',
+          { autoAlpha: 0, y: 10 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.36,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0.1,
+        )
+        .fromTo(
+          '.daily-intent-main',
+          { autoAlpha: 0, y: 16 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.46,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0.14,
+        )
+        .fromTo(
+          '.daily-intent-card',
+          { autoAlpha: 0, y: 18 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.48,
+            clearProps: 'opacity,visibility,transform',
+          },
+          0.18,
+        )
+    }, root)
+
+    return () => context.revert()
+  }, [])
+
+  // Animate Modify modal entrance when opened
+  useEffect(() => {
+    if (!editingId || !modalRef.current) return
+
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+
+    if (reduceMotion) return
+
+    gsap.fromTo(
+      modalRef.current,
+      { autoAlpha: 0, y: 14, scale: 0.98 },
+      {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.24,
+        ease: 'power2.out',
+        clearProps: 'opacity,visibility,transform',
+      },
+    )
   }, [editingId])
 
   const loadDailyTodos = useCallback(async () => {
@@ -253,7 +348,11 @@ export function PersonalDailyTodoScreen({ onBack }: PersonalDailyTodoScreenProps
   }
 
   return (
-    <main className="daily-intent-screen" aria-labelledby="daily-intent-heading">
+    <main
+      ref={rootRef}
+      className="daily-intent-screen"
+      aria-labelledby="daily-intent-heading"
+    >
       <header className="daily-intent-header">
         <div className="daily-intent-header__copy">
           {onBack && (
@@ -556,6 +655,7 @@ export function PersonalDailyTodoScreen({ onBack }: PersonalDailyTodoScreenProps
           }}
         >
           <div
+            ref={modalRef}
             className="daily-edit-modal"
             role="dialog"
             aria-modal="true"

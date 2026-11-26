@@ -1,5 +1,7 @@
 import {
+  useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -7,6 +9,7 @@ import {
 } from 'react'
 
 import { EditorContent, useEditor } from '@tiptap/react'
+import { NodeSelection } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import DOMPurify from 'dompurify'
@@ -19,6 +22,16 @@ export interface PendingEditorImage {
   fieldname: string
   file: File
   previewUrl: string
+}
+
+type ImageWidthPreset = 'small' | 'medium' | 'wide' | 'full'
+type ImageAlignPreset = 'left' | 'center' | 'right'
+
+interface FloatingPopoverState {
+  kind: 'text' | 'image'
+  top: number
+  rawCenterX: number
+  placeBelow: boolean
 }
 
 interface RichTextEditorProps {
@@ -42,6 +55,30 @@ const ALLOWED_IMAGE_TYPES = new Set([
   'image/gif',
 ])
 
+const ResizableAlignedImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: 'wide',
+        parseHTML: (element) =>
+          element.getAttribute('data-width') || 'wide',
+        renderHTML: (attributes) => ({
+          'data-width': attributes.width || 'wide',
+        }),
+      },
+      align: {
+        default: 'center',
+        parseHTML: (element) =>
+          element.getAttribute('data-align') || 'center',
+        renderHTML: (attributes) => ({
+          'data-align': attributes.align || 'center',
+        }),
+      },
+    }
+  },
+})
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -64,11 +101,9 @@ function normalizeEditorContent(value: string): string {
 
   return DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
-
-    // Preserve temporary image previews during editing.
-    // These URLs must be replaced with Frappe file URLs before saving.
+    ADD_ATTR: ['data-width', 'data-align'],
     ALLOWED_URI_REGEXP:
-  /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|matrix|blob):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
+      /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|matrix|blob):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
   })
 }
 
@@ -112,6 +147,9 @@ export function RichTextEditor({
   allowPendingImages = false,
   onPendingImagesChange,
 }: RichTextEditorProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const toolbarRef = useRef<HTMLDivElement>(null)
+  const floatingRef = useRef<HTMLDivElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const pendingImageUrlsRef = useRef<string[]>([])
 
@@ -121,16 +159,16 @@ export function RichTextEditor({
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadMessage, setUploadMessage] = useState<string | null>(null)
+  const [floatingPopover, setFloatingPopover] =
+    useState<FloatingPopoverState | null>(null)
+  const [clampedLeft, setClampedLeft] = useState<number | null>(null)
+  const [, setSelectionVersion] = useState(0)
 
   const canUploadImage = Boolean(doctype?.trim() && docname?.trim())
 
-  // Existing records upload directly. New records stage local previews.
   const canAddImage =
     editable &&
-    (
-      canUploadImage ||
-      (allowPendingImages && Boolean(fieldname))
-    )
+    (canUploadImage || (allowPendingImages && Boolean(fieldname)))
 
   const editor = useEditor({
     editable,
@@ -140,7 +178,7 @@ export function RichTextEditor({
           levels: [1, 2, 3],
         },
       }),
-      Image.configure({
+      ResizableAlignedImage.configure({
         allowBase64: false,
         HTMLAttributes: {
           class: 'rich-text-editor__image',
@@ -159,14 +197,138 @@ export function RichTextEditor({
     onUpdate: ({ editor: activeEditor }) => {
       onChange(activeEditor.getHTML())
     },
+    onSelectionUpdate: () => {
+      setSelectionVersion((v) => v + 1)
+    },
   })
 
-  // Apply permission changes to the existing editor instance.
+  const updateFloatingPosition = useCallback(() => {
+    const container = containerRef.current
+    if (!editor || !container || !editable) {
+      setFloatingPopover(null)
+      return
+    }
+
+    const { selection } = editor.state
+    const containerRect = container.getBoundingClientRect()
+    const toolbarHeight = toolbarRef.current?.offsetHeight ?? 48
+
+    // 1. Image NodeSelection -> anchor directly above/on the selected image
+    if (
+      selection instanceof NodeSelection &&
+      selection.node.type.name === 'image'
+    ) {
+      const domNode = editor.view.nodeDOM(selection.from)
+      if (!(domNode instanceof HTMLElement)) {
+        setFloatingPopover(null)
+        return
+      }
+
+      const imgRect = domNode.getBoundingClientRect()
+      const centerX =
+        imgRect.left - containerRect.left + imgRect.width / 2
+      const topOffset = imgRect.top - containerRect.top
+      const placeBelow = topOffset < toolbarHeight + 54
+
+      setFloatingPopover({
+        kind: 'image',
+        top: placeBelow
+          ? Math.max(toolbarHeight + 8, topOffset + 12)
+          : Math.max(toolbarHeight + 8, topOffset - 10),
+        rawCenterX: centerX,
+        placeBelow,
+      })
+      return
+    }
+
+    // 2. Non-empty text selection -> anchor right above the highlighted text
+    if (!selection.empty) {
+      try {
+        const startCoords = editor.view.coordsAtPos(selection.from)
+        const endCoords = editor.view.coordsAtPos(selection.to)
+
+        const selTop = Math.min(startCoords.top, endCoords.top)
+        const selBottom = Math.max(startCoords.bottom, endCoords.bottom)
+        const selCenterX =
+          (startCoords.left + endCoords.right) / 2 - containerRect.left
+
+        const topOffset = selTop - containerRect.top
+        const placeBelow = topOffset < toolbarHeight + 54
+
+        setFloatingPopover({
+          kind: 'text',
+          top: placeBelow
+            ? selBottom - containerRect.top + 10
+            : Math.max(toolbarHeight + 8, topOffset - 10),
+          rawCenterX: selCenterX,
+          placeBelow,
+        })
+        return
+      } catch {
+        setFloatingPopover(null)
+        return
+      }
+    }
+
+    setFloatingPopover(null)
+  }, [editor, editable])
+
+  // Clamp horizontal position using the popover's real rendered width so edges never clip
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    const popoverEl = floatingRef.current
+
+    if (!floatingPopover || !container || !popoverEl) {
+      setClampedLeft(null)
+      return
+    }
+
+    const containerWidth = container.clientWidth
+    const popoverWidth = popoverEl.offsetWidth
+    const edgePadding = 12
+    const halfWidth = popoverWidth / 2
+
+    if (popoverWidth + edgePadding * 2 >= containerWidth) {
+      setClampedLeft(containerWidth / 2)
+      return
+    }
+
+    const minCenter = halfWidth + edgePadding
+    const maxCenter = containerWidth - halfWidth - edgePadding
+    const nextLeft = Math.max(
+      minCenter,
+      Math.min(maxCenter, floatingPopover.rawCenterX),
+    )
+
+    setClampedLeft(nextLeft)
+  }, [floatingPopover])
+
+  useEffect(() => {
+    if (!editor) return
+
+    const sync = () => {
+      requestAnimationFrame(updateFloatingPosition)
+    }
+
+    sync()
+
+    editor.on('selectionUpdate', sync)
+    editor.on('update', sync)
+    window.addEventListener('resize', sync)
+    window.addEventListener('scroll', sync, true)
+
+    return () => {
+      editor.off('selectionUpdate', sync)
+      editor.off('update', sync)
+      window.removeEventListener('resize', sync)
+      window.removeEventListener('scroll', sync, true)
+    }
+  }, [editor, updateFloatingPosition])
+
   useEffect(() => {
     editor?.setEditable(editable)
   }, [editor, editable])
 
-  // Synchronize backend/form values without emitting another change.
   useEffect(() => {
     if (!editor) return
 
@@ -179,7 +341,6 @@ export function RichTextEditor({
     }
   }, [editor, value])
 
-  // Revoke local preview URLs after the editor unmounts.
   useEffect(() => {
     const previewUrls = pendingImageUrlsRef.current
 
@@ -189,12 +350,59 @@ export function RichTextEditor({
     }
   }, [])
 
+  function moveSelectedImage(direction: 'up' | 'down') {
+    if (!editor || !editable) return
+
+    const { state, view } = editor
+    const { selection, doc } = state
+
+    if (
+      !(selection instanceof NodeSelection) ||
+      selection.node.type.name !== 'image'
+    ) {
+      return
+    }
+
+    const from = selection.from
+    const to = selection.to
+    const node = selection.node
+    const $from = selection.$from
+    const topIndex = $from.index(0)
+
+    if (direction === 'up') {
+      if (topIndex <= 0) return
+
+      let prevStart = 0
+      for (let i = 0; i < topIndex - 1; i += 1) {
+        prevStart += doc.child(i).nodeSize
+      }
+
+      const tr = state.tr
+        .delete(from, to)
+        .insert(prevStart, node)
+
+      tr.setSelection(NodeSelection.create(tr.doc, prevStart))
+      view.dispatch(tr.scrollIntoView())
+      return
+    }
+
+    if (topIndex >= doc.childCount - 1) return
+
+    const nextNode = doc.child(topIndex + 1)
+    const targetPosAfterDelete = from + nextNode.nodeSize
+
+    const tr = state.tr
+      .delete(from, to)
+      .insert(targetPosAfterDelete, node)
+
+    tr.setSelection(NodeSelection.create(tr.doc, targetPosAfterDelete))
+    view.dispatch(tr.scrollIntoView())
+  }
+
   async function handleImageSelected(
     event: ChangeEvent<HTMLInputElement>,
   ) {
     const file = event.target.files?.[0]
-
-    // Allow selecting the same file again after an attempt.
     event.target.value = ''
 
     if (!file || !editor || !editable) return
@@ -212,7 +420,6 @@ export function RichTextEditor({
       return
     }
 
-    // CREATE MODE: preview locally until a record has been created.
     if (!canUploadImage) {
       if (!allowPendingImages || !fieldname) {
         setUploadError(
@@ -222,7 +429,6 @@ export function RichTextEditor({
       }
 
       const previewUrl = URL.createObjectURL(file)
-
       pendingImageUrlsRef.current.push(previewUrl)
 
       const nextImages: PendingEditorImage[] = [
@@ -248,13 +454,12 @@ export function RichTextEditor({
         .run()
 
       setUploadMessage(
-        'Image added. It will upload when you save the record.',
+        'Image added. Click the image to resize or reposition it.',
       )
 
       return
     }
 
-    // UPDATE MODE: the saved record is available for attachment.
     if (!doctype || !docname) return
 
     setUploading(true)
@@ -275,7 +480,7 @@ export function RichTextEditor({
         })
         .run()
 
-      setUploadMessage('Image uploaded and inserted.')
+      setUploadMessage('Image uploaded. Click it to resize or reposition.')
     } catch (error: unknown) {
       setUploadError(
         error instanceof Error
@@ -349,10 +554,24 @@ export function RichTextEditor({
     )
   }
 
+  const isImageSelected = editable && editor.isActive('image')
+  const imageAttrs = isImageSelected ? editor.getAttributes('image') : {}
+  const activeWidth = (imageAttrs.width as ImageWidthPreset) || 'wide'
+  const activeAlign = (imageAttrs.align as ImageAlignPreset) || 'center'
+
+  let canMoveImageUp = false
+  let canMoveImageDown = false
+  if (isImageSelected && editor.state.selection instanceof NodeSelection) {
+    const topIndex = editor.state.selection.$from.index(0)
+    canMoveImageUp = topIndex > 0
+    canMoveImageDown = topIndex < editor.state.doc.childCount - 1
+  }
+
   return (
-    <div className="rich-text-editor">
+    <div ref={containerRef} className="rich-text-editor">
       {editable && (
         <div
+          ref={toolbarRef}
           className="rich-text-editor__toolbar"
           role="toolbar"
           aria-label="Description formatting"
@@ -422,6 +641,14 @@ export function RichTextEditor({
             <i className="ri-strikethrough" aria-hidden="true" />
           </ToolbarButton>
 
+          <ToolbarButton
+            label="Inline code"
+            active={editor.isActive('code')}
+            onClick={() => editor.chain().focus().toggleCode().run()}
+          >
+            <i className="ri-code-line" aria-hidden="true" />
+          </ToolbarButton>
+
           <span className="rich-text-editor__separator" />
 
           <ToolbarButton
@@ -452,6 +679,16 @@ export function RichTextEditor({
             }
           >
             <i className="ri-double-quotes-l" aria-hidden="true" />
+          </ToolbarButton>
+
+          <ToolbarButton
+            label="Code block"
+            active={editor.isActive('codeBlock')}
+            onClick={() =>
+              editor.chain().focus().toggleCodeBlock().run()
+            }
+          >
+            <i className="ri-code-box-line" aria-hidden="true" />
           </ToolbarButton>
 
           <ToolbarButton
@@ -512,11 +749,217 @@ export function RichTextEditor({
         </div>
       )}
 
+      {/* INLINE FLOATING POPOVER CLAMPED STRICTLY INSIDE EDITOR BOUNDS */}
+      {editable && floatingPopover && (
+        <div
+          ref={floatingRef}
+          className={`rich-text-editor__floating${
+            floatingPopover.placeBelow ? ' is-below' : ''
+          }`}
+          style={{
+            top: `${floatingPopover.top}px`,
+            left: `${clampedLeft ?? floatingPopover.rawCenterX}px`,
+            visibility: clampedLeft === null ? 'hidden' : 'visible',
+          }}
+          role="toolbar"
+          aria-label={
+            floatingPopover.kind === 'image'
+              ? 'Image resize and alignment options'
+              : 'Selected text formatting options'
+          }
+          onMouseDown={(event) => event.preventDefault()}
+        >
+          {floatingPopover.kind === 'image' ? (
+            <>
+              <div className="rich-text-editor__floating-group">
+                {(
+                  [
+                    ['small', 'S'],
+                    ['medium', 'M'],
+                    ['wide', '100%'],
+                    ['full', 'Full'],
+                  ] as const
+                ).map(([preset, text]) => (
+                  <ToolbarButton
+                    key={preset}
+                    label={`Image size: ${text}`}
+                    active={activeWidth === preset}
+                    onClick={() =>
+                      editor
+                        .chain()
+                        .focus()
+                        .updateAttributes('image', { width: preset })
+                        .run()
+                    }
+                  >
+                    {text}
+                  </ToolbarButton>
+                ))}
+              </div>
+
+              <span className="rich-text-editor__separator" />
+
+              <div className="rich-text-editor__floating-group">
+                <ToolbarButton
+                  label="Align image left"
+                  active={activeAlign === 'left'}
+                  onClick={() =>
+                    editor
+                      .chain()
+                      .focus()
+                      .updateAttributes('image', { align: 'left' })
+                      .run()
+                  }
+                >
+                  <i className="ri-align-left" aria-hidden="true" />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  label="Center image"
+                  active={activeAlign === 'center'}
+                  onClick={() =>
+                    editor
+                      .chain()
+                      .focus()
+                      .updateAttributes('image', { align: 'center' })
+                      .run()
+                  }
+                >
+                  <i className="ri-align-center" aria-hidden="true" />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  label="Align image right"
+                  active={activeAlign === 'right'}
+                  onClick={() =>
+                    editor
+                      .chain()
+                      .focus()
+                      .updateAttributes('image', { align: 'right' })
+                      .run()
+                  }
+                >
+                  <i className="ri-align-right" aria-hidden="true" />
+                </ToolbarButton>
+              </div>
+
+              <span className="rich-text-editor__separator" />
+
+              <div className="rich-text-editor__floating-group">
+                <ToolbarButton
+                  label="Move image up"
+                  disabled={!canMoveImageUp}
+                  onClick={() => moveSelectedImage('up')}
+                >
+                  <i className="ri-arrow-up-line" aria-hidden="true" />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  label="Move image down"
+                  disabled={!canMoveImageDown}
+                  onClick={() => moveSelectedImage('down')}
+                >
+                  <i className="ri-arrow-down-line" aria-hidden="true" />
+                </ToolbarButton>
+              </div>
+            </>
+          ) : (
+            <>
+              <ToolbarButton
+                label="Heading 1"
+                active={editor.isActive('heading', { level: 1 })}
+                onClick={() =>
+                  editor.chain().focus().toggleHeading({ level: 1 }).run()
+                }
+              >
+                H1
+              </ToolbarButton>
+
+              <ToolbarButton
+                label="Heading 2"
+                active={editor.isActive('heading', { level: 2 })}
+                onClick={() =>
+                  editor.chain().focus().toggleHeading({ level: 2 }).run()
+                }
+              >
+                H2
+              </ToolbarButton>
+
+              <span className="rich-text-editor__separator" />
+
+              <ToolbarButton
+                label="Bold"
+                active={editor.isActive('bold')}
+                onClick={() => editor.chain().focus().toggleBold().run()}
+              >
+                <i className="ri-bold" aria-hidden="true" />
+              </ToolbarButton>
+
+              <ToolbarButton
+                label="Italic"
+                active={editor.isActive('italic')}
+                onClick={() => editor.chain().focus().toggleItalic().run()}
+              >
+                <i className="ri-italic" aria-hidden="true" />
+              </ToolbarButton>
+
+              <ToolbarButton
+                label="Underline"
+                active={editor.isActive('underline')}
+                onClick={() =>
+                  editor.chain().focus().toggleUnderline().run()
+                }
+              >
+                <i className="ri-underline" aria-hidden="true" />
+              </ToolbarButton>
+
+              <ToolbarButton
+                label="Inline code"
+                active={editor.isActive('code')}
+                onClick={() => editor.chain().focus().toggleCode().run()}
+              >
+                <i className="ri-code-line" aria-hidden="true" />
+              </ToolbarButton>
+
+              <span className="rich-text-editor__separator" />
+
+              <ToolbarButton
+                label="Blockquote"
+                active={editor.isActive('blockquote')}
+                onClick={() =>
+                  editor.chain().focus().toggleBlockquote().run()
+                }
+              >
+                <i className="ri-double-quotes-l" aria-hidden="true" />
+              </ToolbarButton>
+
+              <ToolbarButton
+                label="Code block"
+                active={editor.isActive('codeBlock')}
+                onClick={() =>
+                  editor.chain().focus().toggleCodeBlock().run()
+                }
+              >
+                <i className="ri-code-box-line" aria-hidden="true" />
+              </ToolbarButton>
+
+              <ToolbarButton
+                label="Link"
+                active={editor.isActive('link')}
+                onClick={insertLink}
+              >
+                <i className="ri-link" aria-hidden="true" />
+              </ToolbarButton>
+            </>
+          )}
+        </div>
+      )}
+
       <EditorContent editor={editor} />
 
       <div className="rich-text-editor__footer">
         <span>
-          Rich text · Formatting is saved with the description
+          Select text or click an image for inline formatting &amp; resize options
         </span>
         {uploading && (
           <span role="status">Uploading image…</span>

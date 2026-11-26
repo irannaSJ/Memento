@@ -1,4 +1,3 @@
-
 import type { FieldMetadata } from '../../services/mementoApi'
 
 import { AppMultiCombobox } from '../controls/AppMultiCombobox'
@@ -91,16 +90,18 @@ export function FieldRenderer({
           className="metadata-form__label"
           htmlFor={id}
         >
-          {field.label}
+          <span>
+            {field.label}
 
-          {required && (
-            <span
-              className="metadata-form__required"
-              aria-hidden="true"
-            >
-              {' '}*
-            </span>
-          )}
+            {required && (
+              <span
+                className="metadata-form__required"
+                aria-hidden="true"
+              >
+                {' '}*
+              </span>
+            )}
+          </span>
         </label>
 
         <LinkField
@@ -126,74 +127,74 @@ export function FieldRenderer({
     )
   }
 
-
-
   /* ========================================
-   Table MultiSelect
-======================================== */
+     Table MultiSelect
+  ======================================== */
 
-if (field.fieldtype === 'Table MultiSelect') {
-  const childLinkField = field.child_fields?.find(
-    (childField) => childField.fieldtype === 'Link',
-  )
+  if (field.fieldtype === 'Table MultiSelect') {
+    const childLinkField = field.child_fields?.find(
+      (childField) => childField.fieldtype === 'Link',
+    )
 
-  if (!childLinkField || !field.child_doctype) {
+    if (!childLinkField || !field.child_doctype) {
+      return (
+        <div className="metadata-form__field">
+          <label className="metadata-form__label">
+            <span>{field.label}</span>
+          </label>
+
+          <p className="metadata-form__help">
+            Multi-select configuration is unavailable.
+          </p>
+        </div>
+      )
+    }
+
+    const selectedRows = Array.isArray(value)
+      ? value as Record<string, unknown>[]
+      : []
+
     return (
       <div className="metadata-form__field">
         <label className="metadata-form__label">
-          {field.label}
+          <span>
+            {field.label}
+
+            {required && (
+              <span className="metadata-form__required">
+                {' '}*
+              </span>
+            )}
+          </span>
         </label>
 
-        <p className="metadata-form__help">
-          Multi-select configuration is unavailable.
-        </p>
+        <AppMultiCombobox
+          sourceDoctype={doctype ?? ''}
+          fieldname={field.fieldname}
+          childFieldname={childLinkField.fieldname}
+          operation={operation}
+          value={selectedRows.map((row) =>
+            String(row[childLinkField.fieldname] ?? ''),
+          ).filter(Boolean)}
+          onChange={(selectedValues) => {
+            onChange(
+              selectedValues.map((selectedValue) => ({
+                [childLinkField.fieldname]: selectedValue,
+              })),
+            )
+          }}
+          disabled={disabled}
+          placeholder={`Search ${field.label.toLowerCase()}...`}
+        />
+
+        {helperText && (
+          <small className="metadata-form__help">
+            {helperText}
+          </small>
+        )}
       </div>
     )
   }
-
-  const selectedRows = Array.isArray(value)
-    ? value as Record<string, unknown>[]
-    : []
-
-  return (
-    <div className="metadata-form__field">
-      <label className="metadata-form__label">
-        {field.label}
-
-        {required && (
-          <span className="metadata-form__required">
-            {' '}*
-          </span>
-        )}
-      </label>
-
-      <AppMultiCombobox
-        sourceDoctype={doctype ?? ''}
-        fieldname={field.fieldname}
-        childFieldname={childLinkField.fieldname}
-        operation={operation}
-        value={selectedRows.map((row) =>
-          String(row[childLinkField.fieldname] ?? ''),
-        ).filter(Boolean)}
-        onChange={(selectedValues) => {
-          onChange(
-            selectedValues.map((selectedValue) => ({
-              [childLinkField.fieldname]: selectedValue,
-            })),
-          )
-        }}
-        disabled={disabled}
-        placeholder={`Search ${field.label.toLowerCase()}...`}
-      />
-
-      {helperText && (
-        <small className="metadata-form__help">
-          {helperText}
-        </small>
-      )}
-    </div>
-  )
-}
 
   /* ========================================
      Rich Text Editor
@@ -294,7 +295,6 @@ if (field.fieldtype === 'Table MultiSelect') {
     return (
       <AppSelect
         id={id}
-        // className="metadata-form__field"
         label={field.label}
         value={valueText}
         onChange={onChange}
@@ -321,7 +321,6 @@ if (field.fieldtype === 'Table MultiSelect') {
     return (
       <AppDatePicker
         id={id}
-        // className="metadata-form__field"
         label={field.label}
         value={valueText}
         onChange={onChange}

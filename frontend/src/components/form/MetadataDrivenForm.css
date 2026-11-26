@@ -1,26 +1,27 @@
+/* =========================================================
+   MEMENTO — METADATA-DRIVEN FORM
+   ========================================================= */
+
 .metadata-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 19px 22px;
-  padding: 23px 27px 27px;
+  gap: 18px 20px;
+  padding: 22px 26px 26px;
   align-items: start;
 }
 
-/* Keep error messages and the action buttons full-width */
+/* Full-width spans for banners, actions, rich-text editors, textareas, and single-field forms */
 .metadata-form > .metadata-form__error,
 .metadata-form > .metadata-form__empty,
-.metadata-form > .metadata-form__actions {
-  grid-column: 1 / -1;
-}
-
-/* Keep Description and the rich-text editor full-width */
+.metadata-form > .metadata-form__actions,
+.metadata-form > .metadata-form__field:only-of-type,
+.metadata-form > .metadata-form__field:has(textarea),
 .metadata-form > .metadata-form__field:has(.rich-text-editor),
 .metadata-form > .metadata-form__field:has(.rich-text-editor__toolbar) {
   grid-column: 1 / -1;
   min-width: 0;
 }
 
-/* Prevent fields and editor content from overflowing their columns */
 .metadata-form > .metadata-form__field {
   min-width: 0;
 }
@@ -28,22 +29,6 @@
 .metadata-form .rich-text-editor {
   width: 100%;
   min-width: 0;
-}
-
-/* Tablet and mobile: return to a single column */
-@media (max-width: 680px) {
-  .metadata-form {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 17px;
-    padding: 20px;
-  }
-
-  .metadata-form > .metadata-form__field,
-  .metadata-form > .metadata-form__error,
-  .metadata-form > .metadata-form__empty,
-  .metadata-form > .metadata-form__actions {
-    grid-column: 1 / -1;
-  }
 }
 
 .metadata-form__field {
@@ -78,7 +63,9 @@
   font-size: 13px;
   font-weight: 400;
   line-height: 1.6;
-  transition: border-color 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .metadata-form__field input[type='color'] {
@@ -87,19 +74,16 @@
 }
 
 .metadata-form__field textarea {
-  min-height: 94px;
+  min-height: 96px;
   resize: vertical;
 }
 
 .metadata-form__field input:focus-visible,
 .metadata-form__field select:focus-visible,
 .metadata-form__field textarea:focus-visible {
-  /* border-color: var(--color-focus);
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px; */
   border-color: #9ca3af;
-  outline: 2px solid #b0b0b0;
-  outline-offset: 2px;
+  outline: 2px solid rgb(156 163 175 / 24%);
+  outline-offset: 1px;
 }
 
 .metadata-form__field input:disabled,
@@ -137,10 +121,12 @@
 
 .metadata-form__error {
   padding: 12px 14px;
-  border: 1px solid var(--color-border);
+  border: 1px solid color-mix(in srgb, #d14d57 32%, var(--color-border));
   border-radius: 12px;
-  color: var(--color-text);
+  background: color-mix(in srgb, #d14d57 7%, var(--color-surface));
+  color: #b4323c;
   font-size: 12px;
+  font-weight: 550;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
@@ -158,30 +144,17 @@
   font-size: 12px;
 }
 
+/* =========================================================
+   ACTION BUTTONS
+   ========================================================= */
+
 .metadata-form__actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 9px;
-  margin-top: 3px;
+  margin-top: 4px;
 }
-
-.metadata-form__actions button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-@media (max-width: 480px) {
-  .metadata-form {
-    padding: 19px;
-  }
-}
-
-
-
-/* ========================================
-   Metadata-driven form action buttons
-   ======================================== */
 
 .metadata-form__actions button.feature-dialog__secondary,
 .metadata-form__actions button.feature-dialog__primary {
@@ -189,18 +162,14 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-
   min-height: 42px;
   padding: 10px 18px;
-
   border: 1px solid transparent;
   border-radius: 10px;
-
   font-family: inherit;
   font-size: 12px;
   font-weight: 650;
   line-height: 1.4;
-
   cursor: pointer;
   transition:
     background-color 160ms ease,
@@ -210,7 +179,6 @@
     box-shadow 160ms ease;
 }
 
-/* Cancel button */
 .metadata-form__actions button.feature-dialog__secondary {
   background: var(--color-page);
   color: var(--color-text);
@@ -222,7 +190,6 @@
   border-color: var(--color-text);
 }
 
-/* Create / Save button */
 .metadata-form__actions button.feature-dialog__primary {
   background: var(--color-text);
   color: var(--color-page);
@@ -234,38 +201,25 @@
   transform: translateY(-1px);
 }
 
-/* Keyboard accessibility */
 .metadata-form__actions button:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 3px;
 }
 
-/* Disabled / saving state */
 .metadata-form__actions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
 }
 
-/* Icon alignment */
 .metadata-form__actions button i {
   font-size: 14px;
   line-height: 1;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .metadata-form__actions button {
-    transition: none;
-  }
-}
-
-
-
-
-
-/* ==========================================
-   Reusable control alignment
-========================================== */
+/* =========================================================
+   REUSABLE CONTROL ALIGNMENT
+   ========================================================= */
 
 .metadata-form > .app-select,
 .metadata-form > .app-date-picker {
@@ -279,4 +233,47 @@
   align-self: flex-start;
   width: 100%;
   text-align: left;
+}
+
+/* =========================================================
+   RESPONSIVE BREAKPOINTS
+   ========================================================= */
+
+@media (max-width: 680px) {
+  .metadata-form {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .metadata-form > .metadata-form__field,
+  .metadata-form > .metadata-form__error,
+  .metadata-form > .metadata-form__empty,
+  .metadata-form > .metadata-form__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .metadata-form {
+    padding: 18px;
+  }
+
+  .metadata-form__actions {
+    flex-direction: column-reverse;
+  }
+
+  .metadata-form__actions button.feature-dialog__secondary,
+  .metadata-form__actions button.feature-dialog__primary {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .metadata-form__actions button,
+  .metadata-form__field input:not([type='checkbox']),
+  .metadata-form__field select,
+  .metadata-form__field textarea {
+    transition: none;
+  }
 }

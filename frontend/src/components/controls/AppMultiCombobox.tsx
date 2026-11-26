@@ -1,5 +1,5 @@
-
 import {
+  useCallback,
   useEffect,
   useId,
   useRef,
@@ -43,7 +43,7 @@ export function AppMultiCombobox({
   value,
   onChange,
   disabled = false,
-  placeholder = 'Search and select...',
+  placeholder = 'Search and select…',
   id,
 }: AppMultiComboboxProps) {
   const generatedId = useId()
@@ -51,17 +51,42 @@ export function AppMultiCombobox({
 
   const wrapperRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const requestedIdsRef = useRef<Set<string>>(new Set())
 
   const [searchTerm, setSearchTerm] = useState('')
   const [options, setOptions] = useState<LinkOption[]>([])
   const [labels, setLabels] = useState<Record<string, string>>({})
   const [isOpen, setIsOpen] = useState(false)
+  const [openUpwards, setOpenUpwards] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
 
-  // A stable representation of the selected values for effect dependencies.
   const selectedValuesKey = value.join('\u001f')
+
+  const updateDropdownPlacement = useCallback(() => {
+    const el = wrapperRef.current
+    if (!el) return
+
+    const rect = el.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
+
+    setOpenUpwards(spaceBelow < 240 && spaceAbove > spaceBelow)
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    updateDropdownPlacement()
+    window.addEventListener('resize', updateDropdownPlacement)
+    window.addEventListener('scroll', updateDropdownPlacement, true)
+
+    return () => {
+      window.removeEventListener('resize', updateDropdownPlacement)
+      window.removeEventListener('scroll', updateDropdownPlacement, true)
+    }
+  }, [isOpen, updateDropdownPlacement])
 
   // Search Frappe records when the dropdown is open or the search changes.
   useEffect(() => {
@@ -102,6 +127,7 @@ export function AppMultiCombobox({
 
             for (const option of results) {
               next[option.value] = option.label
+              requestedIdsRef.current.add(option.value)
             }
 
             return next
@@ -120,7 +146,7 @@ export function AppMultiCombobox({
             setLoading(false)
           }
         })
-    }, 250)
+    }, 220)
 
     return () => {
       cancelled = true
@@ -143,7 +169,9 @@ export function AppMultiCombobox({
       : []
 
     const missingValues = selectedValues.filter(
-      (selectedValue) => !labels[selectedValue],
+      (selectedValue) =>
+        !labels[selectedValue] &&
+        !requestedIdsRef.current.has(selectedValue),
     )
 
     if (
@@ -154,6 +182,10 @@ export function AppMultiCombobox({
     ) {
       return
     }
+
+    missingValues.forEach((idValue) =>
+      requestedIdsRef.current.add(idValue),
+    )
 
     let cancelled = false
 
@@ -191,7 +223,9 @@ export function AppMultiCombobox({
     }
 
     void loadSelectedLabels().catch(() => {
-      // The record name remains available as a fallback label.
+      missingValues.forEach((idValue) =>
+        requestedIdsRef.current.delete(idValue),
+      )
     })
 
     return () => {
@@ -250,7 +284,7 @@ export function AppMultiCombobox({
       setIsOpen(true)
 
       setActiveIndex((current) =>
-        Math.min(current + 1, visibleOptions.length - 1),
+        Math.min(current + 1, Math.max(visibleOptions.length - 1, 0)),
       )
 
       return
@@ -297,7 +331,7 @@ export function AppMultiCombobox({
       if (!wrapperRef.current?.contains(document.activeElement)) {
         setIsOpen(false)
       }
-    }, 100)
+    }, 120)
   }
 
   return (
@@ -317,58 +351,71 @@ export function AppMultiCombobox({
           }
         }}
       >
-        {value.map((selectedValue) => (
-          <span
-            className="app-multi-combobox__chip"
-            key={selectedValue}
-          >
-            <span className="app-multi-combobox__chip-label">
-              {labels[selectedValue] ?? selectedValue}
+        <div className="app-multi-combobox__values">
+          {value.map((selectedValue) => (
+            <span
+              className="app-multi-combobox__chip"
+              key={selectedValue}
+            >
+              <span className="app-multi-combobox__chip-label">
+                {labels[selectedValue] ?? selectedValue}
+              </span>
+
+              {!disabled && (
+                <button
+                  type="button"
+                  className="app-multi-combobox__remove"
+                  aria-label={`Remove ${
+                    labels[selectedValue] ?? selectedValue
+                  }`}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    removeOption(selectedValue)
+                  }}
+                >
+                  <i className="ri-close-line" aria-hidden="true" />
+                </button>
+              )}
             </span>
+          ))}
 
-            {!disabled && (
-              <button
-                type="button"
-                className="app-multi-combobox__remove"
-                aria-label={`Remove ${
-                  labels[selectedValue] ?? selectedValue
-                }`}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  removeOption(selectedValue)
-                }}
-              >
-                <i className="ri-close-line" aria-hidden="true" />
-              </button>
-            )}
-          </span>
-        ))}
+          {!disabled && (
+            <input
+              ref={inputRef}
+              id={inputId}
+              type="text"
+              className="app-multi-combobox__input"
+              value={searchTerm}
+              placeholder={
+                value.length > 0 ? 'Add another…' : placeholder
+              }
+              onFocus={() => setIsOpen(true)}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              autoComplete="off"
+              aria-expanded={isOpen}
+              aria-autocomplete="list"
+            />
+          )}
+        </div>
 
-        {!disabled && (
-          <input
-            ref={inputRef}
-            id={inputId}
-            type="text"
-            className="app-multi-combobox__input"
-            value={searchTerm}
-            placeholder={
-              value.length > 0 ? 'Add another...' : placeholder
-            }
-            onFocus={() => setIsOpen(true)}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            autoComplete="off"
-            aria-expanded={isOpen}
-            aria-autocomplete="list"
-          />
-        )}
+        <i
+          className="ri-arrow-down-s-line app-multi-combobox__chevron"
+          aria-hidden="true"
+        />
       </div>
 
       {isOpen && !disabled && (
-        <div className="app-multi-combobox__dropdown">
+        <div
+          className={`app-multi-combobox__dropdown${
+            openUpwards ? ' app-multi-combobox__dropdown--upwards' : ''
+          }`}
+          role="listbox"
+        >
           {loading && (
-            <div className="app-multi-combobox__message">
-              Searching...
+            <div className="app-multi-combobox__message" role="status">
+              Searching…
             </div>
           )}
 
@@ -384,7 +431,7 @@ export function AppMultiCombobox({
           {!loading && !error && visibleOptions.length === 0 && (
             <div className="app-multi-combobox__message">
               {options.length > 0
-                ? 'All matching users are already selected.'
+                ? 'All matching records are already selected.'
                 : searchTerm
                   ? 'No matching records found.'
                   : 'No records available.'}
@@ -397,6 +444,8 @@ export function AppMultiCombobox({
               <button
                 key={option.value}
                 type="button"
+                role="option"
+                aria-selected={false}
                 className={`app-multi-combobox__option ${
                   index === activeIndex
                     ? 'app-multi-combobox__option--active'
