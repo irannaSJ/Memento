@@ -104,8 +104,12 @@ export function RecordCard({
   //   isProject ? record.category : record.project,
   // )
 
-  const startDate = isProject ? record.start_date : record.from_date
-  const endDate = isProject ? record.end_date : record.to_date
+  const startDate = isProject
+    ? (record.project_start_time ?? record.start_date)
+    : (record.from_date ?? record.task_start_time)
+  const endDate = isProject
+    ? (record.project_end_time ?? record.end_date)
+    : (record.to_date ?? record.task_end_time)
 
   const excerpt = description.length > 150
     ? `${description.slice(0, 150).trimEnd()}…`

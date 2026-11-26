@@ -366,7 +366,7 @@ def get_doctype_record(
 		field_group="form_fields",
 	)
 
-	data = {"name": doc.name}
+	data = {"name": doc.name, "owner": doc.owner}
 
 	# Only return fields explicitly configured for this form and allowed
 	# by the current user's field permissions.

@@ -235,11 +235,11 @@ export function RecordDetailPage({
           { label: 'PROJECT ID', value: record.name },
           {
             label: 'START DATE',
-            value: formatDate(record.start_date),
+            value: formatDate(record.project_start_time || record.start_date),
           },
           {
             label: 'END DATE',
-            value: formatDate(record.end_date, true),
+            value: formatDate(record.project_end_time || record.end_date, true),
           },
           {
             label: 'CATEGORY',
@@ -255,18 +255,20 @@ export function RecordDetailPage({
           },
           {
             label: 'OWNER',
-            value: plainText(record.user),
+            value: plainText(
+              record.created_by || record.assigned_by || record.owner,
+            ),
           },
         ]
       : [
           { label: 'TASK ID', value: record.name },
           {
             label: 'FROM DATE',
-            value: formatDate(record.from_date),
+            value: formatDate(record.from_date || record.task_start_time),
           },
           {
             label: 'TO DATE',
-            value: formatDate(record.to_date),
+            value: formatDate(record.to_date || record.task_end_time),
           },
           {
             label: 'PROJECT',
@@ -282,7 +284,7 @@ export function RecordDetailPage({
           },
           {
             label: 'CREATED BY',
-            value: plainText(record.created_by),
+            value: plainText(record.created_by || record.owner),
           },
         ]
     : []
