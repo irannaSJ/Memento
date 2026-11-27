@@ -82,6 +82,7 @@
   "roles": [],
   "sequence_id": 1.0,
   "shortcuts": [],
-  "title": "Memento"
+  "title": "Memento",
+  "type": "Workspace"
  }
 ]
